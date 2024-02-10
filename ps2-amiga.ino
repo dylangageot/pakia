@@ -64,8 +64,10 @@ void loop()
     char s[80];
     if (ps2_buffered.counter != PS2_IDLE)
     {
+        uint8_t key = ps2_buffered.buffer;
+        ps2_buffered.counter = PS2_IDLE;
+        
         sprintf(s, "Received key: 0x%x\n", ps2_buffered.buffer);
         Serial.println(s);
-        ps2_buffered.counter = PS2_IDLE;
     }
 }
