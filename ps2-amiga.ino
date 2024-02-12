@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include <avr/interrupt.h>
 
 const size_t PS2_CLK_PIN = 3;
 const size_t PS2_DAT_PIN = 4;
@@ -16,7 +17,7 @@ volatile struct ps2_buffer ps2_buffered;
 
 void setup()
 {
-    Serial.begin(9600);
+    Serial.begin(115200);
 
     // initialize PS/2 state
     ps2_state.counter = PS2_IDLE;
@@ -26,7 +27,15 @@ void setup()
 
     pinMode(PS2_CLK_PIN, INPUT_PULLUP);
     pinMode(PS2_DAT_PIN, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(PS2_CLK_PIN), ps2_clk_falling, FALLING);
+
+    // enable interrupt on INT0
+    EICRA = (EICRA & ~((1 << ISC10) | (1 << ISC11))) | (FALLING << ISC10);
+    EIMSK |= (1 << INT1);
+
+}
+
+ISR(INT1_vect) {
+    ps2_clk_falling();
 }
 
 void ps2_clk_falling()
@@ -62,7 +71,7 @@ void ps2_clk_falling()
 void loop()
 {
     char s[80];
-    if (ps2_buffered.counter != PS2_IDLE)
+    if (ps2_buffered.counter != PS2_IDLE) 
     {
         uint8_t key = ps2_buffered.buffer;
         ps2_buffered.counter = PS2_IDLE;
