@@ -18,10 +18,10 @@ void setup()
     amiga_state = amiga_idle;
 
     // timer did it!
-    // TCCR1A = (1 << COM1A0);
-    TCCR1B = (1 << WGM12) | (1 << CS12) | (1 << CS10);
+    TCCR1A = (1 << COM1A0);
+    TCCR1B = (1 << WGM12) | (1 << CS10); // | (1 << CS10);
     OCR1AH = 0x01;
-    OCR1AL = 0x38;
+    OCR1AL = 0x80;
     TCNT1H = 0;
     TCNT1L = 0;
 
