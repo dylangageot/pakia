@@ -12,70 +12,71 @@ struct ps2_buffer
     uint8_t counter;
 };
 
-volatile struct ps2_buffer ps2_state;
-volatile struct ps2_buffer ps2_buffered;
+static volatile struct ps2_buffer ps2_state;
+static volatile struct ps2_buffer ps2_buffered;
+static void (*volatile ps2_isr_func)(void);
+
+void ps2_stop_bit()
+{
+    // save data
+    ps2_buffered.counter = ps2_state.counter;
+    ps2_buffered.buffer = ps2_state.buffer;
+    // reset counter to idle
+    ps2_isr_func = ps2_start_bit;
+}
+
+void ps2_parity_bit()
+{
+    // parity bit, lets ignore it to begin with
+    ps2_state.counter++;
+    ps2_isr_func = ps2_stop_bit;
+}
+
+void ps2_data_bits()
+{
+    ps2_state.buffer |= ((PIND & (1 << PS2_DAT_PIN)) >> PS2_DAT_PIN) << ps2_state.counter;
+    ps2_state.counter++;
+    ps2_isr_func = (ps2_state.counter < 8) ? ps2_data_bits : ps2_parity_bit;
+}
+
+void ps2_start_bit()
+{
+    ps2_state.buffer = 0;
+    ps2_state.counter = 0;
+    ps2_isr_func = ps2_data_bits;
+}
+
+ISR(INT1_vect)
+{
+    (*ps2_isr_func)();
+}
 
 void setup()
 {
     Serial.begin(115200);
 
     // initialize PS/2 state
-    ps2_state.counter = PS2_IDLE;
-    ps2_state.buffer = 0;
     ps2_buffered.counter = PS2_IDLE;
     ps2_buffered.buffer = 0;
 
     pinMode(PS2_CLK_PIN, INPUT_PULLUP);
     pinMode(PS2_DAT_PIN, INPUT_PULLUP);
 
+    ps2_isr_func = ps2_start_bit;
+
     // enable interrupt on INT0
     EICRA = (EICRA & ~((1 << ISC10) | (1 << ISC11))) | (FALLING << ISC10);
     EIMSK |= (1 << INT1);
-
-}
-
-ISR(INT1_vect) {
-    ps2_clk_falling();
-}
-
-void ps2_clk_falling()
-{
-    if (ps2_state.counter < 8)
-    {
-        // data bits
-        ps2_state.buffer |= ((PIND & (1 << PS2_DAT_PIN)) >> PS2_DAT_PIN) << ps2_state.counter;
-        ps2_state.counter++;
-    }
-    else if (ps2_state.counter == 8)
-    {
-        // parity bit, lets ignore it to begin with
-        ps2_state.counter++;
-    }
-    else if (ps2_state.counter == 9)
-    {
-        // stop bit
-        // save data
-        ps2_buffered.counter = ps2_state.counter;
-        ps2_buffered.buffer = ps2_state.buffer;
-        // reset counter to idle
-        ps2_state.counter = PS2_IDLE;
-    }
-    else if (ps2_state.counter == PS2_IDLE)
-    {
-        // start bit
-        ps2_state.buffer = 0;
-        ps2_state.counter++;
-    }
 }
 
 void loop()
 {
     char s[80];
-    if (ps2_buffered.counter != PS2_IDLE) 
+    if (ps2_buffered.counter != PS2_IDLE)
     {
         uint8_t key = ps2_buffered.buffer;
         ps2_buffered.counter = PS2_IDLE;
-        
+
         sprintf(s, "Received key: 0x%x\n", ps2_buffered.buffer);
         Serial.println(s);
     }
