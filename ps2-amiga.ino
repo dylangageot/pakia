@@ -9,11 +9,14 @@ void setup()
 
 void loop()
 {
+    uint8_t frame_index = 0;
     char s[80];
-    if (ps2_frame.available)
+    volatile struct ps2_frame *frame = (ps2_frames + (ps2_fsm.frame_buffer_index++ & (PS2_FRAME_COUNT_POW_2 - 1)));
+    if (frame->available)
     {
-        uint8_t key = ps2_frame.key;
-        ps2_frame.available = false;
+        uint8_t key = frame->key;
+        frame->available = false;
+        frame_index++;
 
         sprintf(s, "Received key: 0x%x\n", key);
         Serial.println(s);
