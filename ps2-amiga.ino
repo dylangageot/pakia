@@ -94,7 +94,7 @@ inline void amiga_set_clk_low()
 
 inline void amiga_enable_ack_detection_int()
 {
-    EIFR &= ~(1 << INTF0);
+    //EIFR &= ~(1 << INTF0);
     EIMSK |= (1 << INT0);
 }
 
@@ -105,7 +105,7 @@ inline void amiga_disable_ack_detection_int()
 
 inline void amiga_setup_ack_detection()
 {
-    EICRA = (EICRA & ~((1 << ISC00) | (1 << ISC01))) | (FALLING << ISC00);
+    EICRA = (EICRA & ~((1 << ISC00) | (1 << ISC01))); // | (RISING << ISC00);
 }
 
 void setup()
@@ -116,15 +116,13 @@ void setup()
     amiga_setup_ack_detection();
     amiga_setup_timer();
     amiga_setup_timer_for_resync();
+    amiga_set_pins_as_pull_up();
     amiga_fail_state = OK;
     amiga_sync_state = UNSYNCED;
-    amiga_state = amiga_wait_for_ack;
-    amiga_enable_timer_int();
+    amiga_send_one_bit();
 }
 
-void amiga_idle() {}
-
-void amiga_wait_for_ack()
+void amiga_send_one_bit()
 {
     amiga_disable_timer_int();
     amiga_disable_ack_detection_int();
@@ -147,7 +145,7 @@ void amiga_end_transfer()
 {
     amiga_disable_timer_int();
     amiga_set_pins_as_pull_up();
-    amiga_state = amiga_wait_for_ack;
+    amiga_state = amiga_send_one_bit;
     amiga_setup_timer_for_resync();
     amiga_enable_timer_int();
     amiga_enable_ack_detection_int();
@@ -179,6 +177,8 @@ void amiga_frame_set_clk_high()
     amiga_state = (++amiga_bit_counter < 8) ? amiga_frame_set_dat_bit : amiga_end_transfer;
 }
 
+void amiga_idle() {}
+
 ISR(TIMER1_COMPA_vect)
 {
     (*amiga_state)();
@@ -192,7 +192,7 @@ ISR(INT0_vect)
 
     amiga_disable_ack_detection_int();
     amiga_disable_timer_int();
-    if (amiga_state == amiga_wait_for_ack)
+    if (amiga_state == amiga_send_one_bit)
     {
         if (amiga_fail_state > OK)
         {
@@ -231,8 +231,8 @@ ISR(INT0_vect)
             amiga_sync_state = TERMINATE_STREAM;
             amiga_state = amiga_frame_set_dat_bit;
         }
-        amiga_set_pins_as_output();
         amiga_setup_timer_for_frame();
+        amiga_set_pins_as_output();
         amiga_enable_timer_int();
     }
 }
