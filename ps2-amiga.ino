@@ -11,14 +11,24 @@ volatile uint8_t amiga_bit_counter;
 void (*volatile amiga_state)();
 
 inline void amiga_setup_timer() {
-    TCCR1B = (1 << WGM12) | (1 << CS10); // | (1 << CS10);
+    // TCCR1A = (1 << COM1A0);
+    TCCR1B = (1 << WGM12);
 }
 
 inline void amiga_setup_timer_for_frame()
 {
-    // TCCR1A = (1 << COM1A0);
+    TCCR1B = (TCCR1B & ~(0x7)) | (1 << CS10); // | (1 << CS10);
     OCR1AH = 0x01;
     OCR1AL = 0x80;
+    TCNT1H = 0;
+    TCNT1L = 0;
+}
+
+inline void amiga_setup_timer_for_resync()
+{
+    TCCR1B = (TCCR1B & ~(0x7)) | (1 << CS11) | (1 << CS10); // | (1 << CS10);
+    OCR1AH = 0x45;
+    OCR1AL = 0xD3;
     TCNT1H = 0;
     TCNT1L = 0;
 }
@@ -96,7 +106,8 @@ void amiga_wait_for_ack() {}
 void amiga_end_transfer()
 {
     amiga_set_pins_as_pull_up();
-    amiga_disable_timer_int();
+    amiga_setup_timer_for_resync();
+    amiga_enable_ack_detection_int();
     amiga_state = amiga_wait_for_ack;
 }
 
@@ -150,7 +161,7 @@ ISR(TIMER1_COMPA_vect)
 ISR(INT0_vect)
 {
     if (amiga_state == amiga_wait_for_ack) {
-        
+        amiga_state = amiga_idle;
     }
 }
 
