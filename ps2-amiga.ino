@@ -6,15 +6,30 @@
 const size_t AMIGA_CLK_PIN = 5;
 const size_t AMIGA_DAT_PIN = 2;
 
+enum amiga_fail_state
+{
+    OK = 0,
+    SEND_ONE_BIT,
+    SEND_LOST_SYNC
+};
+
+enum amiga_sync_state
+{
+    UNSYNCED = 0,
+    INITIATE_STREAM,
+    TERMINATE_STREAM
+};
+
 volatile uint8_t amiga_data;
 volatile uint8_t amiga_bit_counter;
-volatile bool amiga_failed;
+volatile enum amiga_fail_state amiga_fail_state;
+volatile enum amiga_sync_state amiga_sync_state;
 volatile uint8_t amiga_data_to_recover;
 void (*volatile amiga_state)();
 
 inline void amiga_setup_timer()
 {
-      TCCR1A = (1 << COM1A0);
+    TCCR1A = (1 << COM1A0);
 }
 
 inline void amiga_setup_timer_for_frame()
@@ -37,6 +52,7 @@ inline void amiga_setup_timer_for_resync()
 
 inline void amiga_enable_timer_int()
 {
+    TIFR1 &= ~(1 << OCIE1A);
     TIMSK1 |= (1 << OCIE1A);
 }
 
@@ -78,7 +94,7 @@ inline void amiga_set_clk_low()
 
 inline void amiga_enable_ack_detection_int()
 {
-    EIFR &= (1<< INTF0);
+    EIFR &= ~(1 << INTF0);
     EIMSK |= (1 << INT0);
 }
 
@@ -97,12 +113,13 @@ void setup()
     Serial.begin(115200);
     ps2_fsm.begin();
 
-    amiga_state = amiga_idle;
-    amiga_disable_timer_int();
-    amiga_setup_timer();
-    amiga_disable_ack_detection_int();
     amiga_setup_ack_detection();
-    amiga_set_pins_as_pull_up();
+    amiga_setup_timer();
+    amiga_setup_timer_for_resync();
+    amiga_fail_state = OK;
+    amiga_sync_state = UNSYNCED;
+    amiga_state = amiga_wait_for_ack;
+    amiga_enable_timer_int();
 }
 
 void amiga_idle() {}
@@ -112,17 +129,17 @@ void amiga_wait_for_ack()
     amiga_disable_timer_int();
     amiga_disable_ack_detection_int();
     // got call? we got out of sync
-    if (!amiga_failed)
+    if ((amiga_sync_state > UNSYNCED) && (amiga_fail_state == OK))
     {
-        amiga_failed = true;
+        amiga_fail_state = SEND_ONE_BIT;
         amiga_data_to_recover = amiga_data;
     }
-    amiga_set_pins_as_output();
     // send a single bit with value 1 (low state)
     amiga_bit_counter = 7;
     amiga_data = 0;
     amiga_state = amiga_frame_set_dat_bit;
     amiga_setup_timer_for_frame();
+    amiga_set_pins_as_output();
     amiga_enable_timer_int();
 }
 
@@ -139,7 +156,7 @@ void amiga_end_transfer()
 void amiga_begin_transfer()
 {
     amiga_bit_counter = 0;
-    amiga_failed = false;
+    amiga_fail_state = OK;
     amiga_set_pins_as_output();
     amiga_state = amiga_frame_set_dat_bit;
 }
@@ -169,36 +186,54 @@ ISR(TIMER1_COMPA_vect)
 
 ISR(INT0_vect)
 {
+    const uint8_t lost_sync_code = 0xF9;
+    const uint8_t initiate_power_up_stream_code = 0xFD;
+    const uint8_t terminate_key_stream_power_up_stream_code = 0xFD;
+
     amiga_disable_ack_detection_int();
     amiga_disable_timer_int();
     if (amiga_state == amiga_wait_for_ack)
     {
-        if (amiga_failed)
+        if (amiga_fail_state > OK)
         {
-            const uint8_t lost_sync_code = 0xF9;
-            // if lost sync not sent, send it
-            if (amiga_data != lost_sync_code)
+            if (amiga_fail_state == SEND_ONE_BIT)
             {
                 amiga_bit_counter = 0;
                 amiga_data = ~((lost_sync_code << 1) | (lost_sync_code >> 7));
+                amiga_fail_state = SEND_LOST_SYNC;
                 amiga_state = amiga_frame_set_dat_bit;
             }
-            else
+            else if (amiga_fail_state == SEND_LOST_SYNC)
             {
-                // else resend data that failed to be sent
-                amiga_failed = false;
+                // else resend data that failed to be send
                 amiga_bit_counter = 0;
                 amiga_data = amiga_data_to_recover;
+                amiga_fail_state = OK;
                 amiga_state = amiga_frame_set_dat_bit;
             }
-            amiga_set_pins_as_output();
-            amiga_setup_timer_for_frame();
-            amiga_enable_timer_int();
         }
-        else
+        else if (amiga_sync_state == TERMINATE_STREAM)
         {
             amiga_state = amiga_idle;
+            return;
         }
+        else if (amiga_sync_state == UNSYNCED)
+        {
+            amiga_bit_counter = 0;
+            amiga_data = ~((initiate_power_up_stream_code << 1) | (initiate_power_up_stream_code >> 7));
+            amiga_sync_state = INITIATE_STREAM;
+            amiga_state = amiga_frame_set_dat_bit;
+        }
+        else if (amiga_sync_state == INITIATE_STREAM)
+        {
+            amiga_bit_counter = 0;
+            amiga_data = ~((terminate_key_stream_power_up_stream_code << 1) | (terminate_key_stream_power_up_stream_code >> 7));
+            amiga_sync_state = TERMINATE_STREAM;
+            amiga_state = amiga_frame_set_dat_bit;
+        }
+        amiga_set_pins_as_output();
+        amiga_setup_timer_for_frame();
+        amiga_enable_timer_int();
     }
 }
 
@@ -215,7 +250,7 @@ void send_data_to_amiga(uint8_t data)
     }
     else
     {
-        Serial.println("Too quick, amiga sender is busy");
+        Serial.println("Amiga sender is busy");
     }
 }
 
