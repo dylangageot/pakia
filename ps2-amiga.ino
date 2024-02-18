@@ -3,8 +3,8 @@
 
 #include "ps2.hh"
 
-const size_t AMIGA_CLK_PIN = 2;
-const size_t AMIGA_DAT_PIN = 5;
+const size_t AMIGA_CLK_PIN = 5;
+const size_t AMIGA_DAT_PIN = 2;
 
 volatile uint8_t amiga_data;
 volatile uint8_t amiga_bit_counter;
@@ -14,13 +14,12 @@ void (*volatile amiga_state)();
 
 inline void amiga_setup_timer()
 {
-    TCCR1A = (1 << COM1A0);
-    TCCR1B = (1 << WGM12);
+      TCCR1A = (1 << COM1A0);
 }
 
 inline void amiga_setup_timer_for_frame()
 {
-    TCCR1B = (TCCR1B & ~(0x7)) | (1 << CS10); // | (1 << CS10);
+    TCCR1B = (1 << WGM12) | (1 << CS10); // | (1 << CS10);
     OCR1AH = 0x01;
     OCR1AL = 0x80;
     TCNT1H = 0;
@@ -29,7 +28,7 @@ inline void amiga_setup_timer_for_frame()
 
 inline void amiga_setup_timer_for_resync()
 {
-    TCCR1B = (TCCR1B & ~(0x7)) | (1 << CS11) | (1 << CS10);
+    TCCR1B = (1 << WGM12) | (1 << CS11) | (1 << CS10);
     OCR1AH = 0x8B;
     OCR1AL = 0xA6;
     TCNT1H = 0;
@@ -79,6 +78,7 @@ inline void amiga_set_clk_low()
 
 inline void amiga_enable_ack_detection_int()
 {
+    EIFR &= (1<< INTF0);
     EIMSK |= (1 << INT0);
 }
 
@@ -90,7 +90,6 @@ inline void amiga_disable_ack_detection_int()
 inline void amiga_setup_ack_detection()
 {
     EICRA = (EICRA & ~((1 << ISC00) | (1 << ISC01))) | (FALLING << ISC00);
-    amiga_disable_ack_detection_int();
 }
 
 void setup()
@@ -99,7 +98,9 @@ void setup()
     ps2_fsm.begin();
 
     amiga_state = amiga_idle;
+    amiga_disable_timer_int();
     amiga_setup_timer();
+    amiga_disable_ack_detection_int();
     amiga_setup_ack_detection();
     amiga_set_pins_as_pull_up();
 }
@@ -132,6 +133,7 @@ void amiga_end_transfer()
     amiga_state = amiga_wait_for_ack;
     amiga_setup_timer_for_resync();
     amiga_enable_timer_int();
+    amiga_enable_ack_detection_int();
 }
 
 void amiga_begin_transfer()
