@@ -29,7 +29,7 @@ inline void amiga_setup_timer_for_frame()
 
 inline void amiga_setup_timer_for_resync()
 {
-    TCCR1B = (TCCR1B & ~(0x7)) | (1 << CS11) | (1 << CS10); 
+    TCCR1B = (TCCR1B & ~(0x7)) | (1 << CS11) | (1 << CS10);
     OCR1AH = 0x8B;
     OCR1AL = 0xA6;
     TCNT1H = 0;
@@ -128,8 +128,8 @@ void amiga_wait_for_ack()
 void amiga_end_transfer()
 {
     amiga_disable_timer_int();
-    amiga_state = amiga_wait_for_ack;
     amiga_set_pins_as_pull_up();
+    amiga_state = amiga_wait_for_ack;
     amiga_setup_timer_for_resync();
     amiga_enable_timer_int();
 }
@@ -167,33 +167,35 @@ ISR(TIMER1_COMPA_vect)
 
 ISR(INT0_vect)
 {
-    const uint8_t lost_sync_code = 0xF9;
+    amiga_disable_ack_detection_int();
+    amiga_disable_timer_int();
     if (amiga_state == amiga_wait_for_ack)
     {
         if (amiga_failed)
         {
-            if (amiga_data == lost_sync_code)
+            const uint8_t lost_sync_code = 0xF9;
+            // if lost sync not sent, send it
+            if (amiga_data != lost_sync_code)
             {
-                // gotta send the failure code, then
                 amiga_bit_counter = 0;
                 amiga_data = ~((lost_sync_code << 1) | (lost_sync_code >> 7));
                 amiga_state = amiga_frame_set_dat_bit;
-                amiga_set_pins_as_output();
-                amiga_setup_timer_for_frame();
-            } else 
+            }
+            else
             {
+                // else resend data that failed to be sent
+                amiga_failed = false;
                 amiga_bit_counter = 0;
                 amiga_data = amiga_data_to_recover;
                 amiga_state = amiga_frame_set_dat_bit;
-                amiga_set_pins_as_output();
-                amiga_setup_timer_for_frame();
             }
+            amiga_set_pins_as_output();
+            amiga_setup_timer_for_frame();
+            amiga_enable_timer_int();
         }
         else
         {
             amiga_state = amiga_idle;
-            amiga_disable_ack_detection_int();
-            amiga_disable_timer_int();
         }
     }
 }
