@@ -79,17 +79,17 @@ inline void amiga_set_pins_as_output()
 
 inline void amiga_set_dat_bit(uint8_t bit)
 {
-    PORTD = PORTD & ~(1 << AMIGA_DAT_PIN) | (1 << AMIGA_CLK_PIN) | ((bit) ? (1 << AMIGA_DAT_PIN) : 0);
+    PORTD = PORTD & ~(1 << AMIGA_DAT_PIN) | ((bit) ? (1 << AMIGA_DAT_PIN) : 0);
 }
 
 inline void amiga_set_clk_high()
 {
-    PORTD &= ~(1 << AMIGA_CLK_PIN);
+    PORTD |= (1 << AMIGA_CLK_PIN);
 }
 
 inline void amiga_set_clk_low()
 {
-    PORTD |= (1 << AMIGA_CLK_PIN);
+    PORTD &= ~(1 << AMIGA_CLK_PIN);
 }
 
 inline void amiga_enable_ack_detection_int()
@@ -105,7 +105,7 @@ inline void amiga_disable_ack_detection_int()
 
 inline void amiga_setup_ack_detection()
 {
-    EICRA = (EICRA & ~((1 << ISC00) | (1 << ISC01))) | (FALLING << ISC00);
+    EICRA = (EICRA & ~((1 << ISC00) | (1 << ISC01))) | (RISING << ISC00);
 }
 
 void setup()
@@ -132,11 +132,11 @@ void amiga_send_one_bit()
     // got call? we got out of sync
     if ((amiga_sync_state > UNSYNCED) && (amiga_fail_state == OK))
     {
-        Serial.print("Failed to send data... ");
+        //Serial.print("Failed to send data... ");
         amiga_fail_state = SEND_ONE_BIT;
         amiga_data_to_recover = amiga_data;
     }
-    Serial.println("Proceed to sending one bit every 143ms");
+    //Serial.println("Proceed to sending one bit every 143ms");
     // send a single bit with value 1 (low state)
     amiga_bit_counter = 7;
     amiga_data = 0;
@@ -193,7 +193,7 @@ ISR(INT0_vect)
 {
     const uint8_t lost_sync_code = 0xF9;
     const uint8_t initiate_power_up_stream_code = 0xFD;
-    const uint8_t terminate_key_stream_power_up_stream_code = 0xFD;
+    const uint8_t terminate_key_stream_power_up_stream_code = 0xFE;
     PORTB |= (1 << PIN0);
     amiga_disable_ack_detection_int();
     amiga_disable_timer_int();
@@ -203,7 +203,7 @@ ISR(INT0_vect)
         {
             if (amiga_fail_state == SEND_ONE_BIT)
             {
-                Serial.println("One bit frame got ACKed, send a lost sync code");
+                //Serial.println("One bit frame got ACKed, send a lost sync code");
                 amiga_bit_counter = 0;
                 amiga_data = ~((lost_sync_code << 1) | (lost_sync_code >> 7));
                 amiga_fail_state = SEND_LOST_SYNC;
@@ -212,7 +212,7 @@ ISR(INT0_vect)
             else if (amiga_fail_state == SEND_LOST_SYNC)
             {
                 // else resend data that failed to be send
-                Serial.println("Lost sync code got ACKed, send the original code");
+                //Serial.println("Lost sync code got ACKed, send the original code");
                 amiga_bit_counter = 0;
                 amiga_data = amiga_data_to_recover;
                 amiga_fail_state = OK;
@@ -221,14 +221,14 @@ ISR(INT0_vect)
         }
         else if (amiga_sync_state == TERMINATE_STREAM)
         {
-            Serial.println("Key ACKed, idling");
+            //Serial.println("Key ACKed, idling");
             amiga_state = amiga_idle;
             PORTB &= ~(1 << PIN0);
             return;
         }
         else if (amiga_sync_state == UNSYNCED)
         {
-            Serial.println("One bit frame got ACKed, send a initiate power up stream code");
+            //Serial.println("One bit frame got ACKed, send a initiate power up stream code");
             amiga_bit_counter = 0;
             amiga_data = ~((initiate_power_up_stream_code << 1) | (initiate_power_up_stream_code >> 7));
             amiga_sync_state = INITIATE_STREAM;
@@ -236,7 +236,7 @@ ISR(INT0_vect)
         }
         else if (amiga_sync_state == INITIATE_STREAM)
         {
-            Serial.println("Initiate power up stream frame got ACKed, send a terminate stream code");
+            //Serial.println("Initiate power up stream frame got ACKed, send a terminate stream code");
             amiga_bit_counter = 0;
             amiga_data = ~((terminate_key_stream_power_up_stream_code << 1) | (terminate_key_stream_power_up_stream_code >> 7));
             amiga_sync_state = TERMINATE_STREAM;
@@ -251,9 +251,14 @@ ISR(INT0_vect)
 
 void send_data_to_amiga(uint8_t data)
 {
+    static uint8_t push_down = 0;
     char s[80];
     if (amiga_state == amiga_idle)
     {
+        data |= (push_down & 0x80);
+        push_down ^= 0x80;
+        sprintf(s, "Sending key: 0x%x\n", data);
+        Serial.println(s);
         // roll out data and reverse bit
         amiga_data = ~((data << 1) | (data >> 7));
         amiga_state = amiga_begin_transfer;
@@ -276,7 +281,7 @@ void loop()
         uint8_t key = frame->key;
         frame->available = false;
         frame_index++;
-        send_data_to_amiga(0x21);
+        send_data_to_amiga(0x35);
         sprintf(s, "Received key: 0x%x\n", key);
         Serial.println(s);
     }
