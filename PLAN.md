@@ -97,5 +97,5 @@ Generate Amiga keybaord clock with Clear Time on Capture Match, both generating 
 https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf page 79
 
 - ✅ Use timer and interrupt to implement CLOCK and DATA positioning for Amiga protocol
-- ⬛ Handle ACK from device on keyboard side (Arduino)
+- ✅ Handle ACK from device on keyboard side (Arduino)
 - ⬛ Translate scancode to Amiga scancodes
