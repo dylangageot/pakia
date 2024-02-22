@@ -1,5 +1,8 @@
 # Plan
 
+***Resources:***
+- [Arduino pinout](https://docs.arduino.cc/resources/pinouts/A000066-full-pinout.pdf)
+
 # 1. Implement IBM AT PS/2 protocol
 
 > The PS/2 keyboard port is electrically and logically identical to the IBM AT keyboard port, differing only in the type of electrical connector used. - [Wikipedia](https://en.wikipedia.org/wiki/PS/2_port)
@@ -97,8 +100,8 @@ Open collector setup.
 
 ## Implementation idea
 
-- Generate a discrete periodic interrupt by using a timer [Clear Time on Capture Match](https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf#G1188567) feature, powering the bit banging timing for the Amiga protocol.
-- Wait for acknowlegement from the Amiga by setting up an interrupt on falling or rising edge of the KDATA line.
+- Generate a discrete periodic interrupt by using a timer [Clear Time on Capture Match](https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf#G1188567) feature, powering the bit-banging timing for the Amiga protocol.
+Wait for acknowledgment from the Amiga by setting up an interrupt on the falling or rising edge of the KDATA line.
 
 ## Todo
 
