@@ -92,10 +92,17 @@ KDATA is managed by both.
 Active low signal levels.
 Open collector setup.
 
-Generate Amiga keybaord clock with Clear Time on Capture Match, both generating the oscillating clock and the ability to tweak data line through an interrupt.
+***Sources:***
+- http://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node0172.html
 
-https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf page 79
+## Implementation idea
+
+- Generate a discrete periodic interrupt by using a timer [Clear Time on Capture Match](https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf#G1188567) feature, powering the bit banging timing for the Amiga protocol.
+- Wait for acknowlegement from the Amiga by setting up an interrupt on falling or rising edge of the KDATA line.
+
+## Todo
 
 - ✅ Use timer and interrupt to implement CLOCK and DATA positioning for Amiga protocol
 - ✅ Handle ACK from device on keyboard side (Arduino)
 - ⬛ Translate scancode to Amiga scancodes
+        - to be continued
