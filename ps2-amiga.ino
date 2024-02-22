@@ -4,9 +4,19 @@
 #include "ps2.hh"
 #include "amiga.hh"
 
+struct ps2_context
+{
+    bool is_released;
+    bool is_e0_prefixed;
+};
+
+static struct ps2_context ps2_context;
+
+static bool caps_lock;
+
 static char translation_map[128];
 
-static bool key_status[128] = {false};
+static bool key_status[256] = {false};
 
 void init_translation_map()
 {
@@ -23,7 +33,6 @@ void init_translation_map()
     translation_map[0x01] = 0x58; // F9
     translation_map[0x09] = 0x59; // F10
     translation_map[0x78] = 0x5F; // HELP on F11
-
 
     // zero line
     translation_map[0x0E] = 0x00; // `
@@ -73,8 +82,8 @@ void init_translation_map()
     translation_map[0x5A] = 0x44; // ENTER
 
     // third letter line
-    translation_map[0x12] = 0x30; // SHIFT
-    // translation_map[0x61] = 0x38; // <
+    translation_map[0x12] = 0x60; // LEFT SHIFT
+    // translation_map[0x61] = 0x38; // ?
     translation_map[0x1A] = 0x31; // X
     translation_map[0x22] = 0x32; // A
     translation_map[0x21] = 0x33; // C
@@ -85,18 +94,27 @@ void init_translation_map()
     translation_map[0x41] = 0x38; // , (<)
     translation_map[0x49] = 0x39; // . (>)
     translation_map[0x4A] = 0x3A; // /
+    translation_map[0x59] = 0x61; // RIGHT SHIFT
+
+    // last line
+    translation_map[0x14] = 0x63;            // CTRL
+    translation_map[(1 << 7) | 0x1F] = 0x66; // LEFT AMIGA
+    translation_map[0x11] = 0x64;            // LEFT ALT
+    translation_map[0x29] = 0x40;            // SPACE
+    translation_map[(1 << 7) | 0x11] = 0x65; // RIGHT ALT
+    translation_map[(1 << 7) | 0x27] = 0x67; // RIGHT AMIGA
+    translation_map[(1 << 7) | 0x14] = 0x63; // CTRL
 }
-
-
-bool released = false;
 
 void setup()
 {
     Serial.begin(115200);
     ps2_fsm.begin();
-    amiga_fsm.begin(); 
+    amiga_fsm.begin();
     init_translation_map();
-    released = false;
+    ps2_context.is_released = false;
+    ps2_context.is_e0_prefixed = false;
+    caps_lock = false;
 }
 
 void loop()
@@ -115,22 +133,31 @@ void loop()
 
         if (scancode == 0xF0)
         {
-            released = true;
+            ps2_context.is_released = true;
+        }
+        else if (scancode == 0xE0)
+        {
+            ps2_context.is_e0_prefixed = true;
         }
         else
         {
-            uint8_t keycode = translation_map[scancode];
-            if (released)
+            if (scancode == 0x58)
             {
-                amiga_fsm.send_keycode(keycode | (1 << 7));
-                released = false;
-                key_status[keycode] = false;
+                if (ps2_context.is_released == false)
+                {
+                    caps_lock = !caps_lock;
+                    amiga_fsm.send_keycode(translation_map[scancode] | (caps_lock ? (1 << 7) : 0)) && 
+                        Serial.println("caps lock inversed!");
+                }
             }
-            else if (key_status[keycode] == false)
+            else
             {
-                amiga_fsm.send_keycode(keycode);
-                key_status[keycode] == true;
+                scancode |= ps2_context.is_e0_prefixed ? (1 << 7) : 0;
+                amiga_fsm.send_keycode(translation_map[scancode] | (ps2_context.is_released ? (1 << 7) : 0)) && 
+                    Serial.println("sent to amiga!");
             }
+            ps2_context.is_released = false;
+            ps2_context.is_e0_prefixed = false;
         }
     }
 }
