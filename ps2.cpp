@@ -6,17 +6,16 @@
 
 #include "ps2.hh"
 
-volatile struct ps2_frame ps2_frames[PS2_FRAME_COUNT_POW_2];
-volatile struct ps2_fsm ps2_fsm;
+volatile ps2_frame_t ps2_frames[PS2_FRAME_COUNT];
+volatile ps2_fsm_t ps2_fsm;
 
 void ps2_process_start_bit();
 void ps2_process_data_bits();
 void ps2_process_parity_bit();
 void ps2_process_stop_bit();
 
-void ps2_fsm::begin()
+void ps2_fsm_t::begin()
 {
-    frame_buffer_index = 0;
     state = ps2_process_start_bit;
 
     // initialize PS/2 pin state
@@ -55,10 +54,57 @@ static void ps2_process_parity_bit()
 
 static void ps2_process_stop_bit()
 {
+    volatile ps2_frame_t *frame = ps2_fsm.iterator.get();
     // save data
-    volatile struct ps2_frame *frame = (ps2_frames + (ps2_fsm.frame_buffer_index++ & (PS2_FRAME_COUNT_POW_2 - 1)));
+    frame->scancode = ps2_fsm.buffer;
     frame->available = true;
-    frame->key = ps2_fsm.buffer;
+    // move forward frame pointer and wrap around if needed
+    ps2_fsm.iterator.move_forward();
     // reset counter to idle
     ps2_fsm.state = ps2_process_start_bit;
+}
+
+ps2_parser_t::ps2_parser_t()
+{
+    reset();
+}
+
+bool ps2_parser_t::consume(ps2_frame_iterator_t *iterator)
+{
+    volatile ps2_frame_t *frame = iterator->get();
+    if (frame->available)
+    {
+        _last_scancode_fed = frame->scancode;
+        frame->available = false;
+        iterator->move_forward();
+        if (_last_scancode_fed == 0xF0)
+        {
+            _is_released = true;
+        }
+        else if (_last_scancode_fed == 0xE0)
+        {
+            _is_e0_prefixed = true;
+        }
+        else
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+ps2_event_t ps2_parser_t::get_event()
+{
+    ps2_event_t event;
+    event.event_kind = _is_released ? RELEASED : PRESSED;
+    event.scancode = _last_scancode_fed | (_is_e0_prefixed ? 1 << 7 : 0);
+    reset();
+    return event;
+}
+
+void ps2_parser_t::reset()
+{
+    _is_e0_prefixed = false;
+    _is_released = false;
+    _last_scancode_fed = 0;
 }

@@ -4,19 +4,11 @@
 #include "ps2.hh"
 #include "amiga.hh"
 
-struct ps2_context
-{
-    bool is_released;
-    bool is_e0_prefixed;
-};
-
-static struct ps2_context ps2_context;
-
-static bool caps_lock;
-
+static ps2_parser_t ps2_parser;
+static ps2_frame_iterator_t frame_iterator;
 static char translation_map[128];
-
 static bool key_status[256] = {false};
+static bool caps_lock;
 
 void init_translation_map()
 {
@@ -112,52 +104,34 @@ void setup()
     ps2_fsm.begin();
     amiga_fsm.begin();
     init_translation_map();
-    ps2_context.is_released = false;
-    ps2_context.is_e0_prefixed = false;
     caps_lock = false;
 }
 
 void loop()
 {
-    uint8_t frame_index = 0;
     char s[80];
-    volatile struct ps2_frame *frame = (ps2_frames + (ps2_fsm.frame_buffer_index++ & (PS2_FRAME_COUNT_POW_2 - 1)));
-    if (frame->available)
-    {
-        uint8_t scancode = frame->key;
-        frame->available = false;
-        frame_index++;
 
-        sprintf(s, "Received key: 0x%x\n", scancode);
+    if (ps2_parser.consume(&frame_iterator))
+    {
+        ps2_event_t event = ps2_parser.get_event();
+
+        sprintf(s, "Key %s: 0x%x\n", ((event.event_kind == PRESSED) ? "pressed" : "released"), event.scancode);
         Serial.println(s);
 
-        if (scancode == 0xF0)
-        {
-            ps2_context.is_released = true;
-        }
-        else if (scancode == 0xE0)
-        {
-            ps2_context.is_e0_prefixed = true;
-        }
-        else
-        {
-            if (scancode == 0x58)
-            {
-                if (ps2_context.is_released == false)
-                {
-                    caps_lock = !caps_lock;
-                    amiga_fsm.send_keycode(translation_map[scancode] | (caps_lock ? (1 << 7) : 0)) && 
-                        Serial.println("caps lock inversed!");
-                }
-            }
-            else
-            {
-                scancode |= ps2_context.is_e0_prefixed ? (1 << 7) : 0;
-                amiga_fsm.send_keycode(translation_map[scancode] | (ps2_context.is_released ? (1 << 7) : 0)) && 
-                    Serial.println("sent to amiga!");
-            }
-            ps2_context.is_released = false;
-            ps2_context.is_e0_prefixed = false;
-        }
+        // if (scancode == 0x58)
+        // {
+        //     if (ps2_context.is_released == false)
+        //     {
+        //         caps_lock = !caps_lock;
+        //         amiga_fsm.send_keycode(translation_map[scancode] | (caps_lock ? (1 << 7) : 0)) &&
+        //             Serial.println("caps lock inversed!");
+        //     }
+        // }
+        // else
+        // {
+        //     scancode |= ps2_context.is_e0_prefixed ? (1 << 7) : 0;
+        //     amiga_fsm.send_keycode(translation_map[scancode] | (ps2_context.is_released ? (1 << 7) : 0)) &&
+        //         Serial.println("sent to amiga!");
+        // }
     }
 }
