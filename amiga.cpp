@@ -6,7 +6,7 @@
 
 #include "amiga.hh"
 
-volatile struct amiga_fsm amiga_fsm;
+struct amiga_fsm amiga_fsm;
 
 inline void amiga_setup_timer()
 {

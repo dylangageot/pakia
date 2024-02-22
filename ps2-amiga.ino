@@ -110,11 +110,9 @@ void setup()
 void loop()
 {
     char s[80];
-
-    if (ps2_parser.consume(&frame_iterator))
+    ps2_event_t event;
+    if (ps2_parser.consume(&frame_iterator, &event))
     {
-        ps2_event_t event = ps2_parser.get_event();
-
         sprintf(s, "Key %s: 0x%x\n", ((event.event_kind == PRESSED) ? "pressed" : "released"), event.scancode);
         Serial.println(s);
 

@@ -7,7 +7,7 @@
 #include "ps2.hh"
 
 volatile ps2_frame_t ps2_frames[PS2_FRAME_COUNT];
-volatile ps2_fsm_t ps2_fsm;
+ps2_fsm_t ps2_fsm;
 
 void ps2_process_start_bit();
 void ps2_process_data_bits();
@@ -69,7 +69,7 @@ ps2_parser_t::ps2_parser_t()
     reset();
 }
 
-bool ps2_parser_t::consume(ps2_frame_iterator_t *iterator)
+bool ps2_parser_t::consume(ps2_frame_iterator_t *iterator, ps2_event_t *event)
 {
     volatile ps2_frame_t *frame = iterator->get();
     if (frame->available)
@@ -87,19 +87,13 @@ bool ps2_parser_t::consume(ps2_frame_iterator_t *iterator)
         }
         else
         {
+            event->event_kind = _is_released ? RELEASED : PRESSED;
+            event->scancode = _last_scancode_fed | (_is_e0_prefixed ? 1 << 7 : 0);
+            reset();
             return true;
         }
     }
     return false;
-}
-
-ps2_event_t ps2_parser_t::get_event()
-{
-    ps2_event_t event;
-    event.event_kind = _is_released ? RELEASED : PRESSED;
-    event.scancode = _last_scancode_fed | (_is_e0_prefixed ? 1 << 7 : 0);
-    reset();
-    return event;
 }
 
 void ps2_parser_t::reset()

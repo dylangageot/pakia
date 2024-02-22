@@ -1,6 +1,6 @@
 #pragma once
 
-const size_t PS2_FRAME_COUNT = 8;
+const size_t PS2_FRAME_COUNT = 16;
 
 const size_t PS2_CLK_PIN = 3;
 const size_t PS2_DAT_PIN = 4;
@@ -43,7 +43,7 @@ struct ps2_fsm_t
     void begin();
 };
 
-extern volatile ps2_fsm_t ps2_fsm;
+extern ps2_fsm_t ps2_fsm;
 
 enum event_kind_t
 {
@@ -60,8 +60,7 @@ struct ps2_event_t
 struct ps2_parser_t
 {
     ps2_parser_t();
-    bool consume(ps2_frame_iterator_t *iterator);
-    ps2_event_t get_event();
+    bool consume(ps2_frame_iterator_t *iterator, ps2_event_t *event);
     void reset();
 
 private:

@@ -30,4 +30,4 @@ struct amiga_fsm
     bool send_keycode(uint8_t keycode);
 };
 
-extern volatile struct amiga_fsm amiga_fsm;
+extern struct amiga_fsm amiga_fsm;
