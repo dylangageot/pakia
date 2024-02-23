@@ -12,50 +12,8 @@ namespace ps2
     struct circular_buffer<frame> frames;
     struct fsm fsm;
 
-    void ps2_process_start_bit();
-    void ps2_process_data_bits();
-    void ps2_process_parity_bit();
-    void ps2_process_stop_bit();
-
-    void fsm::begin()
-    {
-        state = ps2_process_start_bit;
-
-        // initialize PS/2 pin state
-        pinMode(CLK_PIN, INPUT_PULLUP);
-        pinMode(DAT_PIN, INPUT_PULLUP);
-
-        // enable interrupt on INT0
-        EICRA = (EICRA & ~((1 << ISC10) | (1 << ISC11))) | (FALLING << ISC10);
-        EIMSK |= (1 << INT1);
-    }
-
-    ISR(INT1_vect)
-    {
-        (*fsm.state)();
-    }
-
-    static void ps2_process_start_bit()
-    {
-        fsm.buffer = 0;
-        fsm.counter = 0;
-        fsm.state = ps2_process_data_bits;
-    }
-
-    static void ps2_process_data_bits()
-    {
-        fsm.buffer |= ((PIND & (1 << DAT_PIN)) >> DAT_PIN) << fsm.counter++;
-        fsm.state = (fsm.counter < 8) ? ps2_process_data_bits : ps2_process_parity_bit;
-    }
-
-    static void ps2_process_parity_bit()
-    {
-        // parity bit, lets ignore it to begin with
-        fsm.counter++;
-        fsm.state = ps2_process_stop_bit;
-    }
-
-    static void ps2_process_stop_bit()
+    static void process_start_bit();
+    static void process_stop_bit()
     {
         volatile frame *frame = frames.write_iterator().get();
         // save data
@@ -64,15 +22,68 @@ namespace ps2
         // move forward frame pointer and wrap around if needed
         frames.write_iterator().next();
         // reset counter to idle
-        fsm.state = ps2_process_start_bit;
+        fsm.state = process_start_bit;
     }
 
-    parser::parser()
+    static void process_parity_bit()
+    {
+        // parity bit, lets ignore it to begin with
+        fsm.counter++;
+        fsm.state = process_stop_bit;
+    }
+
+    static void process_data_bits()
+    {
+        fsm.buffer |= ((PIND & (1 << DAT_PIN)) >> DAT_PIN) << fsm.counter++;
+        fsm.state = (fsm.counter < 8) ? process_data_bits : process_parity_bit;
+    }
+
+    static void process_start_bit()
+    {
+        fsm.buffer = 0;
+        fsm.counter = 0;
+        fsm.state = process_data_bits;
+    }
+
+    inline static void set_pins_pull_up() {
+        pinMode(CLK_PIN, INPUT_PULLUP);
+        pinMode(DAT_PIN, INPUT_PULLUP);
+    }
+
+    inline static void enable_external_pin_interrupt() {
+        EICRA = (EICRA & ~((1 << ISC10) | (1 << ISC11))) | (FALLING << ISC10);
+        EIMSK |= (1 << INT1);
+    }
+
+    void begin() {
+        fsm.begin();
+    }
+
+    void fsm::begin()
+    {
+        state = process_start_bit;
+        set_pins_pull_up();
+        enable_external_pin_interrupt();
+    }
+
+    ISR(INT1_vect)
+    {
+        (*fsm.state)();
+    }
+
+    receiver::receiver()
     {
         reset();
     }
 
-    bool parser::consume(event &event)
+    void receiver::reset()
+    {
+        _is_e0_prefixed = false;
+        _is_released = false;
+        _last_scancode_fed = 0;
+    }
+
+    bool receiver::consume(event &event)
     {
         volatile frame *frame = frames.read_iterator().get();
         if (frame->available)
@@ -99,11 +110,5 @@ namespace ps2
         return false;
     }
 
-    void parser::reset()
-    {
-        _is_e0_prefixed = false;
-        _is_released = false;
-        _last_scancode_fed = 0;
-    }
 
 }

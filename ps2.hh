@@ -5,6 +5,8 @@ namespace ps2
     const size_t CLK_PIN = 3;
     const size_t DAT_PIN = 4;
 
+    void begin();
+
     struct frame
     {
         bool available;
@@ -16,7 +18,7 @@ namespace ps2
     {
         struct iterator
         {
-            iterator(volatile T *elem_ptr) : _elem_ptr(elem_ptr), _initial_elem_ptr(elem_ptr) {}
+            iterator(volatile T *begin_ptr) : _elem_ptr(begin_ptr), _begin_ptr(begin_ptr), _end_ptr(begin_ptr + SIZE) {}
 
             inline volatile T *get()
             {
@@ -25,12 +27,13 @@ namespace ps2
 
             inline void next()
             {
-                _elem_ptr = (++_elem_ptr >= (_initial_elem_ptr + SIZE)) ? _initial_elem_ptr : _elem_ptr;
+                _elem_ptr = (++_elem_ptr = _end_ptr) ? _begin_ptr : _elem_ptr;
             }
 
         private:
             volatile T *_elem_ptr;
-            volatile T *_initial_elem_ptr;
+            volatile T *_begin_ptr;
+            volatile T *_end_ptr;
         };
 
         inline iterator &write_iterator()
@@ -58,8 +61,6 @@ namespace ps2
         void begin();
     };
 
-    extern struct fsm fsm;
-
     enum event_kind
     {
         PRESSED = 0,
@@ -72,9 +73,9 @@ namespace ps2
         uint8_t scancode;
     };
 
-    struct parser
+    struct receiver
     {
-        parser();
+        receiver();
         bool consume(event &event);
         void reset();
 
