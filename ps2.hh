@@ -2,6 +2,7 @@
 
 namespace ps2
 {
+    
     const size_t CLK_PIN = 3;
     const size_t DAT_PIN = 4;
 

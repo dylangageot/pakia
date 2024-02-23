@@ -45,17 +45,20 @@ namespace ps2
         fsm.state = process_data_bits;
     }
 
-    inline static void set_pins_pull_up() {
+    inline static void set_pins_pull_up()
+    {
         pinMode(CLK_PIN, INPUT_PULLUP);
         pinMode(DAT_PIN, INPUT_PULLUP);
     }
 
-    inline static void enable_external_pin_interrupt() {
+    inline static void enable_external_pin_interrupt()
+    {
         EICRA = (EICRA & ~((1 << ISC10) | (1 << ISC11))) | (FALLING << ISC10);
         EIMSK |= (1 << INT1);
     }
 
-    void begin() {
+    void begin()
+    {
         fsm.begin();
     }
 
@@ -109,6 +112,5 @@ namespace ps2
         }
         return false;
     }
-
 
 }

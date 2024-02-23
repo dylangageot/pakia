@@ -101,7 +101,7 @@ void setup()
 {
     Serial.begin(115200);
     ps2::begin();
-    amiga_fsm.begin();
+    amiga::begin();
     init_translation_map();
     caps_lock = false;
 }
