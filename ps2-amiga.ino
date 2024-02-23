@@ -4,8 +4,8 @@
 #include "ps2.hh"
 #include "amiga.hh"
 
-static ps2_parser_t ps2_parser;
-static ps2_frame_iterator_t frame_iterator;
+static ps2::parser ps2_parser;
+static ps2::frame_iterator frame_iterator;
 static char translation_map[128];
 static bool key_status[256] = {false};
 static bool caps_lock;
@@ -101,7 +101,7 @@ void init_translation_map()
 void setup()
 {
     Serial.begin(115200);
-    ps2_fsm.begin();
+    ps2::fsm.begin();
     amiga_fsm.begin();
     init_translation_map();
     caps_lock = false;
@@ -110,10 +110,10 @@ void setup()
 void loop()
 {
     char s[80];
-    ps2_event_t event;
+    ps2::event event;
     if (ps2_parser.consume(&frame_iterator, &event))
     {
-        sprintf(s, "Key %s: 0x%x\n", ((event.event_kind == PRESSED) ? "pressed" : "released"), event.scancode);
+        sprintf(s, "Key %s: 0x%x\n", ((event.event_kind == ps2::event_kind::PRESSED) ? "pressed" : "released"), event.scancode);
         Serial.println(s);
 
         // if (scancode == 0x58)

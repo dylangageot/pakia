@@ -1,70 +1,75 @@
 #pragma once
 
-const size_t PS2_FRAME_COUNT = 16;
-
-const size_t PS2_CLK_PIN = 3;
-const size_t PS2_DAT_PIN = 4;
-
-struct ps2_frame_t
+namespace ps2
 {
-    bool available;
-    uint8_t scancode;
-};
 
-extern volatile ps2_frame_t ps2_frames[PS2_FRAME_COUNT];
+    const size_t FRAME_COUNT = 16;
 
-struct ps2_frame_iterator_t
-{
-    ps2_frame_iterator_t(volatile ps2_frame_t *frame = ps2_frames, const size_t frame_count = PS2_FRAME_COUNT) : _frame(frame), _initial_frame(frame), _frame_count(frame_count) {}
+    const size_t CLK_PIN = 3;
+    const size_t DAT_PIN = 4;
 
-    inline volatile ps2_frame_t *get()
+    struct frame
     {
-        return _frame;
-    }
+        bool available;
+        uint8_t scancode;
+    };
 
-    inline void move_forward()
+    extern volatile frame frames[FRAME_COUNT];
+
+    struct frame_iterator
     {
-        _frame = (++_frame >= (_initial_frame + _frame_count)) ? _initial_frame : _frame;
-    }
+        frame_iterator(volatile frame *frame = frames, const size_t frame_count = FRAME_COUNT) : _frame(frame), _initial_frame(frame), _frame_count(frame_count) {}
 
-private:
-    volatile ps2_frame_t *_frame;
-    volatile ps2_frame_t *_initial_frame;
-    const size_t _frame_count;
-};
+        inline volatile frame *get()
+        {
+            return _frame;
+        }
 
-struct ps2_fsm_t
-{
-    void (*state)();
-    uint8_t buffer;
-    uint8_t counter;
-    ps2_frame_iterator_t iterator;
+        inline void move_forward()
+        {
+            _frame = (++_frame >= (_initial_frame + _frame_count)) ? _initial_frame : _frame;
+        }
 
-    void begin();
-};
+    private:
+        volatile frame *_frame;
+        volatile frame *_initial_frame;
+        const size_t _frame_count;
+    };
 
-extern ps2_fsm_t ps2_fsm;
+    struct fsm
+    {
+        void (*state)();
+        uint8_t buffer;
+        uint8_t counter;
+        frame_iterator iterator;
 
-enum event_kind_t
-{
-    PRESSED = 0,
-    RELEASED = 1
-};
+        void begin();
+    };
 
-struct ps2_event_t
-{
-    enum event_kind_t event_kind;
-    uint8_t scancode;
-};
+    extern struct fsm fsm;
 
-struct ps2_parser_t
-{
-    ps2_parser_t();
-    bool consume(ps2_frame_iterator_t *iterator, ps2_event_t *event);
-    void reset();
+    enum event_kind
+    {
+        PRESSED = 0,
+        RELEASED = 1
+    };
 
-private:
-    bool _is_released;
-    bool _is_e0_prefixed;
-    uint8_t _last_scancode_fed;
-};
+    struct event
+    {
+        enum event_kind event_kind;
+        uint8_t scancode;
+    };
+
+    struct parser
+    {
+        parser();
+        bool consume(frame_iterator *iterator, event *event);
+        void reset();
+
+    private:
+        bool _is_released;
+        bool _is_e0_prefixed;
+        uint8_t _last_scancode_fed;
+    };
+
+}
