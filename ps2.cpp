@@ -107,7 +107,7 @@ namespace ps2
                 event.event_kind = _is_released ? RELEASED : PRESSED;
                 event.scancode = _last_scancode_fed | (_is_e0_prefixed ? 1 << 7 : 0);
                 reset();
-                return true;
+                return event.scancode != 0;
             }
         }
         return false;

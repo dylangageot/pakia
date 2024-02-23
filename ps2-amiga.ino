@@ -4,10 +4,7 @@
 #include "ps2.hh"
 #include "amiga.hh"
 
-static ps2::receiver receiver;
 static char translation_map[128];
-static bool key_status[256] = {false};
-static bool caps_lock;
 
 void init_translation_map()
 {
@@ -103,32 +100,44 @@ void setup()
     ps2::begin();
     amiga::begin();
     init_translation_map();
-    caps_lock = false;
 }
 
 void loop()
 {
-    char s[80];
-    ps2::event event;
-    if (receiver.consume(event))
-    {
-        sprintf(s, "Key %s: 0x%x\n", ((event.event_kind == ps2::event_kind::PRESSED) ? "pressed" : "released"), event.scancode);
-        Serial.println(s);
+    static ps2::receiver receiver;
+    static bool key_status[256] = {false};
+    static bool caps_lock = false;
+    static char s[80];
 
-        // if (scancode == 0x58)
-        // {
-        //     if (ps2_context.is_released == false)
-        //     {
-        //         caps_lock = !caps_lock;
-        //         amiga_fsm.send_keycode(translation_map[scancode] | (caps_lock ? (1 << 7) : 0)) &&
-        //             Serial.println("caps lock inversed!");
-        //     }
-        // }
-        // else
-        // {
-        //     scancode |= ps2_context.is_e0_prefixed ? (1 << 7) : 0;
-        //     amiga_fsm.send_keycode(translation_map[scancode] | (ps2_context.is_released ? (1 << 7) : 0)) &&
-        //         Serial.println("sent to amiga!");
-        // }
+    while (amiga::is_ready())
+    {
+        ps2::event event;
+        if (receiver.consume(event))
+        {
+            sprintf(s, "Key %s: 0x%x\n", ((event.event_kind == ps2::event_kind::PRESSED) ? "pressed" : "released"), event.scancode);
+            Serial.println(s);
+
+            if (event.scancode == ps2::CAPS_LOCK_SCANCODE)
+            {
+                if (event.event_kind == ps2::event_kind::RELEASED)
+                {
+                    caps_lock = !caps_lock;
+                    amiga::send(translation_map[event.scancode] | (caps_lock ? (1 << 7) : 0)) &&
+                        Serial.println("caps lock inversed!");
+                }
+            }
+            else if ((event.event_kind == ps2::event_kind::PRESSED) && !key_status[event.scancode])
+            {
+                key_status[event.scancode] = true;
+                amiga::send(translation_map[event.scancode]) &&
+                    Serial.println("pressed key sent to amiga!");
+            }
+            else if (event.event_kind == ps2::event_kind::RELEASED)
+            {
+                key_status[event.scancode] = false;
+                amiga::send(translation_map[event.scancode] | 1 << 7) &&
+                    Serial.println("released key sent to amiga!");
+            }
+        }
     }
 }

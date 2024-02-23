@@ -2,9 +2,11 @@
 
 namespace ps2
 {
-    
+
     const size_t CLK_PIN = 3;
     const size_t DAT_PIN = 4;
+
+    const uint8_t CAPS_LOCK_SCANCODE = 0x58;
 
     void begin();
 

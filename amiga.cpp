@@ -19,6 +19,10 @@ namespace amiga
         return fsm.send(keycode);
     }
 
+    bool is_ready() {
+        return fsm.is_ready();
+    }
+
     inline void setup_timer()
     {
         TCCR1A = (1 << COM1A0);
@@ -246,9 +250,13 @@ namespace amiga
         send_one_bit();
     }
 
+    bool fsm::is_ready() {
+        return (sync_state == TERMINATE_STREAM) && (fail_state == OK) && (state == idle);
+    }
+
     bool fsm::send(uint8_t keycode)
     {
-        if (state != idle)
+        if (!is_ready())
         {
             return false;
         }

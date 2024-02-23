@@ -8,6 +8,7 @@ namespace amiga
 
     void begin();
     bool send(uint8_t keycode);
+    bool is_ready();
 
     enum fail_state
     {
@@ -33,6 +34,7 @@ namespace amiga
         enum sync_state sync_state;
 
         void begin();
+        bool is_ready();
         bool send(uint8_t keycode);
     };
 
