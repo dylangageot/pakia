@@ -109,32 +109,32 @@ void loop()
     static bool caps_lock = false;
     static char s[80];
 
-    while (amiga::is_ready())
+    ps2::event event;
+    while (amiga::is_ready() && receiver.consume(event))
     {
-        ps2::event event;
-        if (receiver.consume(event))
-        {
-            sprintf(s, "Key %s: 0x%x\n", ((event.event_kind == ps2::event_kind::PRESSED) ? "pressed" : "released"), event.scancode);
-            Serial.println(s);
+        sprintf(s, "Key %s: 0x%x\n", ((event.event_kind == ps2::event_kind::PRESSED) ? "pressed" : "released"), event.scancode);
+        Serial.println(s);
 
+        if ((event.event_kind == ps2::event_kind::PRESSED) && !key_status[event.scancode])
+        {
+            key_status[event.scancode] = true;
             if (event.scancode == ps2::CAPS_LOCK_SCANCODE)
             {
-                if (event.event_kind == ps2::event_kind::RELEASED)
-                {
-                    caps_lock = !caps_lock;
-                    amiga::send(translation_map[event.scancode] | (caps_lock ? (1 << 7) : 0)) &&
-                        Serial.println("caps lock inversed!");
-                }
+                caps_lock = !caps_lock;
+                amiga::send(translation_map[event.scancode] | (caps_lock ? (1 << 7) : 0)) &&
+                    Serial.println("caps lock inversed!");
             }
-            else if ((event.event_kind == ps2::event_kind::PRESSED) && !key_status[event.scancode])
+            else
             {
-                key_status[event.scancode] = true;
                 amiga::send(translation_map[event.scancode]) &&
                     Serial.println("pressed key sent to amiga!");
             }
-            else if (event.event_kind == ps2::event_kind::RELEASED)
+        }
+        else if (event.event_kind == ps2::event_kind::RELEASED)
+        {
+            key_status[event.scancode] = false;
+            if (event.scancode != ps2::CAPS_LOCK_SCANCODE)
             {
-                key_status[event.scancode] = false;
                 amiga::send(translation_map[event.scancode] | 1 << 7) &&
                     Serial.println("released key sent to amiga!");
             }

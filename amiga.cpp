@@ -8,7 +8,6 @@
 
 namespace amiga
 {
-
     struct fsm fsm;
 
     void begin() {
@@ -251,7 +250,7 @@ namespace amiga
     }
 
     bool fsm::is_ready() {
-        return (sync_state == TERMINATE_STREAM) && (fail_state == OK) && (state == idle);
+        return (state == idle) && (sync_state == TERMINATE_STREAM) && (fail_state == OK);
     }
 
     bool fsm::send(uint8_t keycode)

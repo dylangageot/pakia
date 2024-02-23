@@ -28,9 +28,10 @@ namespace ps2
                 return _elem_ptr;
             }
 
-            inline void next()
+            inline volatile T *next()
             {
-                _elem_ptr = (++_elem_ptr == _end_ptr) ? _begin_ptr : _elem_ptr;
+                _elem_ptr = (++_elem_ptr >= _end_ptr) ? _begin_ptr : _elem_ptr;
+                return _elem_ptr;
             }
 
         private:
