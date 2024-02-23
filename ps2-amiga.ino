@@ -5,7 +5,6 @@
 #include "amiga.hh"
 
 static ps2::parser ps2_parser;
-static ps2::frame_iterator frame_iterator;
 static char translation_map[128];
 static bool key_status[256] = {false};
 static bool caps_lock;
@@ -111,7 +110,7 @@ void loop()
 {
     char s[80];
     ps2::event event;
-    if (ps2_parser.consume(&frame_iterator, &event))
+    if (ps2_parser.consume(event))
     {
         sprintf(s, "Key %s: 0x%x\n", ((event.event_kind == ps2::event_kind::PRESSED) ? "pressed" : "released"), event.scancode);
         Serial.println(s);

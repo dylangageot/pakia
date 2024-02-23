@@ -2,9 +2,6 @@
 
 namespace ps2
 {
-
-    const size_t FRAME_COUNT = 16;
-
     const size_t CLK_PIN = 3;
     const size_t DAT_PIN = 4;
 
@@ -14,26 +11,42 @@ namespace ps2
         uint8_t scancode;
     };
 
-    extern volatile frame frames[FRAME_COUNT];
-
-    struct frame_iterator
+    template <typename T, size_t SIZE = 16>
+    struct circular_buffer
     {
-        frame_iterator(volatile frame *frame = frames, const size_t frame_count = FRAME_COUNT) : _frame(frame), _initial_frame(frame), _frame_count(frame_count) {}
-
-        inline volatile frame *get()
+        struct iterator
         {
-            return _frame;
+            iterator(volatile T *elem_ptr) : _elem_ptr(elem_ptr), _initial_elem_ptr(elem_ptr) {}
+
+            inline volatile T *get()
+            {
+                return _elem_ptr;
+            }
+
+            inline void next()
+            {
+                _elem_ptr = (++_elem_ptr >= (_initial_elem_ptr + SIZE)) ? _initial_elem_ptr : _elem_ptr;
+            }
+
+        private:
+            volatile T *_elem_ptr;
+            volatile T *_initial_elem_ptr;
+        };
+
+        inline iterator &write_iterator()
+        {
+            return _write_iterator;
         }
 
-        inline void move_forward()
+        inline iterator &read_iterator()
         {
-            _frame = (++_frame >= (_initial_frame + _frame_count)) ? _initial_frame : _frame;
+            return _read_iterator;
         }
 
     private:
-        volatile frame *_frame;
-        volatile frame *_initial_frame;
-        const size_t _frame_count;
+        volatile T _buffer[SIZE];
+        iterator _write_iterator = iterator(_buffer);
+        iterator _read_iterator = iterator(_buffer);
     };
 
     struct fsm
@@ -41,7 +54,6 @@ namespace ps2
         void (*state)();
         uint8_t buffer;
         uint8_t counter;
-        frame_iterator iterator;
 
         void begin();
     };
@@ -63,7 +75,7 @@ namespace ps2
     struct parser
     {
         parser();
-        bool consume(frame_iterator *iterator, event *event);
+        bool consume(event &event);
         void reset();
 
     private:

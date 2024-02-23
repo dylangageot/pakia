@@ -9,7 +9,7 @@
 namespace ps2
 {
 
-    volatile frame frames[FRAME_COUNT];
+    struct circular_buffer<frame> frames;
     struct fsm fsm;
 
     void ps2_process_start_bit();
@@ -57,12 +57,12 @@ namespace ps2
 
     static void ps2_process_stop_bit()
     {
-        volatile frame *frame = fsm.iterator.get();
+        volatile frame *frame = frames.write_iterator().get();
         // save data
         frame->scancode = fsm.buffer;
         frame->available = true;
         // move forward frame pointer and wrap around if needed
-        fsm.iterator.move_forward();
+        frames.write_iterator().next();
         // reset counter to idle
         fsm.state = ps2_process_start_bit;
     }
@@ -72,14 +72,14 @@ namespace ps2
         reset();
     }
 
-    bool parser::consume(frame_iterator *iterator, event *event)
+    bool parser::consume(event &event)
     {
-        volatile frame *frame = iterator->get();
+        volatile frame *frame = frames.read_iterator().get();
         if (frame->available)
         {
             _last_scancode_fed = frame->scancode;
             frame->available = false;
-            iterator->move_forward();
+            frames.read_iterator().next();
             if (_last_scancode_fed == 0xF0)
             {
                 _is_released = true;
@@ -90,8 +90,8 @@ namespace ps2
             }
             else
             {
-                event->event_kind = _is_released ? RELEASED : PRESSED;
-                event->scancode = _last_scancode_fed | (_is_e0_prefixed ? 1 << 7 : 0);
+                event.event_kind = _is_released ? RELEASED : PRESSED;
+                event.scancode = _last_scancode_fed | (_is_e0_prefixed ? 1 << 7 : 0);
                 reset();
                 return true;
             }
