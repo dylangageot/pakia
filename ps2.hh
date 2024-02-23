@@ -30,7 +30,7 @@ namespace ps2
 
             inline void next()
             {
-                _elem_ptr = (++_elem_ptr = _end_ptr) ? _begin_ptr : _elem_ptr;
+                _elem_ptr = (++_elem_ptr == _end_ptr) ? _begin_ptr : _elem_ptr;
             }
 
         private:
