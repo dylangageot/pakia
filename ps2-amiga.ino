@@ -36,7 +36,7 @@ void init_translation_map()
     translation_map[0x45] = 0x0A; // 0
     translation_map[0x4e] = 0x0B; // 0
     translation_map[0x55] = 0x0C; // -
-    translation_map[0x66] = 0x41; // backspace
+    translation_map[0x66] = 0x41; // BACKSPACE
 
     // first letter line
     translation_map[0x0D] = 0x42; // TAB
@@ -71,7 +71,7 @@ void init_translation_map()
 
     // third letter line
     translation_map[0x12] = 0x60; // LEFT SHIFT
-    // translation_map[0x61] = 0x38; // ?
+    translation_map[0x61] = 0x0D; // BACKSLASH
     translation_map[0x1A] = 0x31; // X
     translation_map[0x22] = 0x32; // A
     translation_map[0x21] = 0x33; // C
@@ -92,6 +92,33 @@ void init_translation_map()
     translation_map[(1 << 7) | 0x11] = 0x65; // RIGHT ALT
     translation_map[(1 << 7) | 0x27] = 0x67; // RIGHT AMIGA
     translation_map[(1 << 7) | 0x14] = 0x63; // CTRL
+
+    translation_map[(1 << 7) | 0x71] = 0x46; // DELETE
+
+    // cursors
+    translation_map[(1 << 7) | 0x75] = 0x4C; // CURSOR UP
+    translation_map[(1 << 7) | 0x72] = 0x4D; // CURSOR DOWN
+    translation_map[(1 << 7) | 0x6B] = 0x4F; // CURSOR LEFT
+    translation_map[(1 << 7) | 0x74] = 0x4E; // CURSOR RIGHT
+
+    // num pad
+    translation_map[0x77] = 0x5A;               // (
+    translation_map[(1 << 7) | 0x4A] = 0x5C;    // /
+    translation_map[0x7C] = 0x5D;               // *
+    translation_map[0x7B] = 0x4A;               // -
+    translation_map[0x6C] = 0x3D;               // 7
+    translation_map[0x75] = 0x3E;               // 8
+    translation_map[0x7D] = 0x3F;               // 9
+    translation_map[0x79] = 0x5E;               // +
+    translation_map[0x6B] = 0x2D;               // 4
+    translation_map[0x73] = 0x2E;               // 5
+    translation_map[0x74] = 0x2F;               // 6
+    translation_map[0x69] = 0x1D;               // 1
+    translation_map[0x72] = 0x1E;               // 2
+    translation_map[0x7A] = 0x1F;               // 3
+    translation_map[0x70] = 0x0F;               // 0
+    translation_map[0x71] = 0x3C;               // .
+    translation_map[(1 << 7) | 0x5A] = 0x43;    // ENTER
 }
 
 void setup()
