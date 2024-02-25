@@ -16,7 +16,7 @@ namespace ps2
         uint8_t scancode;
     };
 
-    template <typename T, size_t SIZE = 16>
+    template <typename T, size_t SIZE = 4>
     struct circular_buffer
     {
         struct iterator

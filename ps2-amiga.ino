@@ -4,7 +4,7 @@
 #include "ps2.hh"
 #include "amiga.hh"
 
-static char translation_map[128];
+static char translation_map[256];
 
 void init_translation_map()
 {
@@ -132,7 +132,7 @@ void setup()
 void loop()
 {
     static ps2::receiver receiver;
-    static bool key_status[256] = {false};
+    static uint8_t last_scancode = 0;
     static bool caps_lock = false;
     static char s[80];
 
@@ -142,9 +142,9 @@ void loop()
         sprintf(s, "Key %s: 0x%x\n", ((event.event_kind == ps2::event_kind::PRESSED) ? "pressed" : "released"), event.scancode);
         Serial.println(s);
 
-        if ((event.event_kind == ps2::event_kind::PRESSED) && !key_status[event.scancode])
+        if ((event.event_kind == ps2::event_kind::PRESSED) && (event.scancode != last_scancode))
         {
-            key_status[event.scancode] = true;
+            last_scancode = event.scancode;
             if (event.scancode == ps2::CAPS_LOCK_SCANCODE)
             {
                 caps_lock = !caps_lock;
@@ -159,7 +159,9 @@ void loop()
         }
         else if (event.event_kind == ps2::event_kind::RELEASED)
         {
-            key_status[event.scancode] = false;
+            if (event.scancode == last_scancode) {
+                last_scancode = 0;
+            }
             if (event.scancode != ps2::CAPS_LOCK_SCANCODE)
             {
                 amiga::send(translation_map[event.scancode] | 1 << 7) &&
