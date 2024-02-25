@@ -1,2 +1,4 @@
 tools/translation-map-generator
-
+hardware/*-backups/*
+*.kicad_prl
+fp-info-cache
