@@ -107,5 +107,14 @@ Wait for acknowledgment from the Amiga by setting up an interrupt on the falling
 
 - ✅ Use timer and interrupt to implement CLOCK and DATA positioning for Amiga protocol
 - ✅ Handle ACK from device on keyboard side (Arduino)
-- ⬛ Translate scancode to Amiga scancodes
-        - to be continued
+- ✅ Translate scancode to Amiga scancodes
+- ⬛ Move to PCINT for ack detection
+
+# Todo
+
+- ⬛ Find an appropriate MCU for the final product
+        - does using a PCINT instead of INT0 for Amiga ack detection would suffice?
+         in this case, we could use a cool ATTiny!
+         ATTiny85 seems low on SRAM...
+- ⬛ Make a PCB
+
