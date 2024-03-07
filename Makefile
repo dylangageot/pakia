@@ -1,6 +1,6 @@
 # derived from https://gist.github.com/ryanleary/8250880
 
-PROJECT    = ps22amiga
+PROJECT    = pstwo2amiga
 VERSION	   = 0.1.0
 NAME	   = $(PROJECT)-$(VERSION)
 
@@ -8,9 +8,9 @@ DEVICE     = attiny85           # See avr-help for all possible devices
 CLOCK      = 8000000            # 8Mhz
 PROGRAMMER = -P /dev/ttyACM0 -c avrisp -b 19200  
 								# For using Arduino as ISP
+
 SRCS       = src/main.c         
-BUILD_DIR ?= ./build
-OBJS	   = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
+OBJS	   = $(SRCS:.c=.o)
 
 # fuse settings:
 # use http://www.engbedded.com/fusecalc
@@ -22,14 +22,13 @@ ACC ?= avr-gcc
 CFLAGS = -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
 
 # symbolic targets:
-all: $(BUILD_DIR)/$(NAME).hex
+all: $(NAME).hex
 
-$(BUILD_DIR)/%.o : %.c
-	@mkdir -p $(dir $@)
+%.o : %.c
 	$(ACC) $(CFLAGS) -c $< -o $@
 
-flash: all
-	$(AVRDUDE) -U flash:w:main.hex:i
+flash: $(NAME).hex
+	$(AVRDUDE) -U flash:w:$(NAME).hex:i
 
 fuse:
 	$(AVRDUDE) $(FUSES)
@@ -37,19 +36,19 @@ fuse:
 install: flash fuse
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(OBJS) $(NAME).elf $(NAME).hex
 
 # file targets:
-$(BUILD_DIR)/$(NAME).elf: $(OBJS)
-	$(ACC) $(CFLAGS) -o $(BUILD_DIR)/$(NAME).elf $(OBJS)
+$(NAME).elf: $(OBJS)
+	$(ACC) $(CFLAGS) -o $(NAME).elf $(OBJS)
 
-$(BUILD_DIR)/$(NAME).hex: $(BUILD_DIR)/$(NAME).elf
-	rm -f $(BUILD_DIR)/$(NAME).hex
-	avr-objcopy -j .text -j .data -O ihex $(BUILD_DIR)/$(NAME).elf $(BUILD_DIR)/$(NAME).hex
-	avr-size --format=avr --mcu=$(DEVICE) $(BUILD_DIR)/$(NAME).elf
+$(NAME).hex: $(NAME).elf
+	rm -f $(NAME).hex
+	avr-objcopy -j .text -j .data -O ihex $(NAME).elf $(NAME).hex
+	avr-size --format=avr --mcu=$(DEVICE) $(NAME).elf
 # If you have an EEPROM section, you must also create a hex file for the
 # EEPROM and add it to the "flash" target.
 
 # Targets for code debugging and analysis:
-disasm: $(BUILD_DIR)/$(NAME).elf
-	avr-objdump -d $(BUILD_DIR)/$(NAME).elf
+disasm: $(NAME).elf
+	avr-objdump -d $(NAME).elf
