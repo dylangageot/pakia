@@ -5,3 +5,4 @@ fp-info-cache
 *.o
 *.hex
 *.elf
+build/
