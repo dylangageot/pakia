@@ -28,7 +28,7 @@ all: $(NAME).hex
 	$(ACC) $(CFLAGS) -c $< -o $@
 
 flash: $(NAME).hex
-	$(AVRDUDE) -U flash:w:$(NAME).hex:i
+	$(AVRDUDE) -U flash:w:$<:i
 
 fuse:
 	$(AVRDUDE) $(FUSES)
@@ -40,15 +40,15 @@ clean:
 
 # file targets:
 $(NAME).elf: $(OBJS)
-	$(ACC) $(CFLAGS) -o $(NAME).elf $(OBJS)
+	$(ACC) $(CFLAGS) -o $@ $^
 
 $(NAME).hex: $(NAME).elf
-	rm -f $(NAME).hex
-	avr-objcopy -j .text -j .data -O ihex $(NAME).elf $(NAME).hex
-	avr-size --format=avr --mcu=$(DEVICE) $(NAME).elf
+	rm -f $@
+	avr-objcopy -j .text -j .data -O ihex $< $@
+	avr-size --format=avr --mcu=$(DEVICE) $<
 # If you have an EEPROM section, you must also create a hex file for the
 # EEPROM and add it to the "flash" target.
 
 # Targets for code debugging and analysis:
-disasm: $(NAME).elf
-	avr-objdump -d $(NAME).elf
+disasm: $<
+	avr-objdump -d $<
