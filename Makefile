@@ -9,8 +9,8 @@ CLOCK      = 8000000            # 8Mhz
 PROGRAMMER = -P /dev/ttyACM0 -c avrisp -b 19200  
 								# For using Arduino as ISP
 
-SRCS       = src/main.c         
-OBJS	   = $(SRCS:.c=.o)
+SRCS       = src/main.cc
+OBJS	   = $(SRCS:.cc=.o)
 
 # fuse settings:
 # use http://www.engbedded.com/fusecalc
@@ -18,13 +18,13 @@ OBJS	   = $(SRCS:.c=.o)
 FUSES      = -U lfuse:w:0xe2:m -U hfuse:w:0xdf:m -U efuse:w:0xff:m  # 8mhz
 
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
-ACC ?= avr-gcc
+ACC ?= avr-g++
 CFLAGS = -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
 
 # symbolic targets:
 all: $(NAME).hex
 
-%.o : %.c
+%.o : %.cc
 	$(ACC) $(CFLAGS) -c $< -o $@
 
 flash: $(NAME).hex
