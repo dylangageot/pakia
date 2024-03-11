@@ -1,69 +1,53 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-#include "pins.hh"
-
-ISR(TIM1_OVF_vect)
-{
-    //PORTB ^= pins::amiga::DAT;
-}
-
-ISR(PCINT0_vect)
-{
-    
-}
+#include "ps2.hh"
+#include "amiga.hh"
+#include "translation_map.hh"
 
 int main()
 {
 
-    // enable pull-up
+    SREG |= (1 << SREG_I);
     MCUCR &= ~(1 << PUD);
 
-    // ps2::CLK and ps2::DAT as input (with pull-up)
-    DDRB &= ~(pins::ps2::CLK | pins::ps2::DAT);
-    PORTB |= pins::ps2::CLK | pins::ps2::DAT;
+    ps2::begin();
+    amiga::begin();
 
-    // ps2::CLK interrupt enable
-    MCUCR = (MCUCR & ~((1 << ISC01) | (1 << ISC00))) | (1 << ISC01);
-    GIFR |= (1 << INTF0);
-    GIMSK |= (1 << INT0);
-    SREG |= (1 << SREG_I);
-
-    // amiga::CLK and amiga::DAT as output
-    DDRB |= pins::amiga::CLK | pins::amiga::DAT;
-    PORTB |= pins::amiga::CLK | pins::amiga::DAT;
-
-    // ps2 inihibt
-    // TCCR0A = (1 << WGM01); // CTC
-    // TCCR0B = (1 << CS02) | (1 << CS00); // f_clk_io, no prescaling
-    // TCNT0 = 0;
-    // OCR0A = 155;
-    // TIFR |= (1 << OCF0A);
-    // TIMSK |= (1 << OCIE0A);
-
-    // // amiga bitbanging timer setup
-    // 20u config
-    // TCCR1 = (1 << PWM1A) | (1 << CS10); // f_clk_io, no prescaling
-    // GTCCR &= (1 << TSM) | (1 << PSR0);
-    // TCNT1 = 0;
-    // OCR1C = 159;
-    // TIFR |= (1 << TOV1);
-    // TIMSK |= (1 << TOIE1);
-
-    // 143ms config
-    TCCR1 = (1 << PWM1A) | (1 << CS13) | (1 << CS12) | (1 << CS11); // f_clk_io, no prescaling
-    GTCCR &= (1 << TSM) | (1 << PSR0);
-    TCNT1 = 0;
-    OCR1C = 138;
-    TIFR |= (1 << TOV1);
-    TIMSK |= (1 << TOIE1);
-
-    // ack interrupt
-    GIFR |= (1 << PCIF);
-    GIMSK |= (1 << PCIE);
-    PCMSK |= (1 << PCINT4);
-
+    ps2::receiver receiver;
+    uint8_t last_scancode = 0;
+    bool caps_lock = false;
+    char s[80];
+    ps2::event event;
     while (1)
     {
+        while (amiga::is_ready() && receiver.consume(event))
+        {
+            uint8_t amiga_keycode = pgm_read_byte_near(ps2_scancode_to_amiga_keycode + event.scancode);
+            if ((event.event_kind == ps2::event_kind::PRESSED) && (event.scancode != last_scancode))
+            {
+                last_scancode = event.scancode;
+                if (event.scancode == ps2::CAPS_LOCK_SCANCODE)
+                {
+                    caps_lock = !caps_lock;
+                    amiga::send(amiga_keycode | (caps_lock ? (1 << 7) : 0));
+                }
+                else
+                {
+                    amiga::send(amiga_keycode);
+                }
+            }
+            else if (event.event_kind == ps2::event_kind::RELEASED)
+            {
+                if (event.scancode == last_scancode)
+                {
+                    last_scancode = 0;
+                }
+                if (event.scancode != ps2::CAPS_LOCK_SCANCODE)
+                {
+                    amiga::send(amiga_keycode | 1 << 7);
+                }
+            }
+        }
     }
 }

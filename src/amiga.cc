@@ -1,101 +1,100 @@
-#define __AVR_ATmega328P__
-
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <Arduino.h>
 
 #include "amiga.hh"
+#include "pins.hh"
 
 namespace amiga
 {
     struct fsm fsm;
 
-    void begin() {
+    void begin()
+    {
         fsm.begin();
     }
 
-    bool send(uint8_t keycode) {
+    bool send(uint8_t keycode)
+    {
         return fsm.send(keycode);
     }
 
-    bool is_ready() {
+    bool is_ready()
+    {
         return fsm.is_ready();
     }
 
     inline void setup_timer()
     {
-        TCCR1A = (1 << COM1A0);
+        TCCR1 = (1 << PWM1A);
+        GTCCR &= (1 << TSM) | (1 << PSR0);
     }
 
     inline void setup_timer_for_frame()
     {
-        TCCR1B = (1 << WGM12) | (1 << CS10); // | (1 << CS10);
-        OCR1AH = 0x01;
-        OCR1AL = 0x80;
-        TCNT1H = 0;
-        TCNT1L = 0;
+        TCCR1 = (TCCR1 & ~((1 << CS13) | (1 << CS12) | (1 << CS11) | (1 << CS10))) | (1 << CS10);
+        OCR1C = 159;
+        TCNT1 = 0;
     }
 
     inline void setup_timer_for_resync()
     {
-        TCCR1B = (1 << WGM12) | (1 << CS11) | (1 << CS10);
-        OCR1AH = 0x8B;
-        OCR1AL = 0xA6;
-        TCNT1H = 0;
-        TCNT1L = 0;
+        TCCR1 = (TCCR1 & ~((1 << CS13) | (1 << CS12) | (1 << CS11) | (1 << CS10))) | (1 << CS13) | (1 << CS12) | (1 << CS11);
+        OCR1C = 138;
+        TCNT1 = 0;
     }
 
     inline void enable_timer_int()
     {
-        TIFR1 &= ~(1 << OCIE1A);
-        TIMSK1 |= (1 << OCIE1A);
+        TIFR |= (1 << TOV1);
+        TIMSK |= (1 << TOIE1);
     }
 
     inline void disable_timer_int()
     {
-        TIMSK1 &= ~(1 << OCIE1A);
+        TIMSK &= ~(1 << TOIE1);
     }
 
     inline void set_pins_as_pull_up()
     {
-        DDRD &= ~((1 << CLK_PIN) | (1 << DAT_PIN));
-        PORTD |= (1 << CLK_PIN) | (1 << DAT_PIN);
+        DDRB &= ~(pins::amiga::CLK | pins::amiga::DAT);
+        PORTB |= pins::amiga::CLK | pins::amiga::DAT;
     }
 
     inline void set_pins_as_output()
     {
-        DDRD |= (1 << CLK_PIN) | (1 << DAT_PIN);
+        DDRB |= pins::amiga::CLK | pins::amiga::DAT;
+        PORTB |= pins::amiga::CLK | pins::amiga::DAT;
     }
 
     inline void set_dat_bit(uint8_t bit)
     {
-        PORTD = PORTD & ~(1 << DAT_PIN) | ((bit) ? (1 << DAT_PIN) : 0);
+        PORTB = (PORTB & ~pins::amiga::DAT) | ((bit) ? pins::amiga::DAT : 0);
     }
 
     inline void set_clk_high()
     {
-        PORTD |= (1 << CLK_PIN);
+        PORTB |= pins::amiga::CLK;
     }
 
     inline void set_clk_low()
     {
-        PORTD &= ~(1 << CLK_PIN);
+        PORTB &= ~pins::amiga::CLK;
     }
 
     inline void enable_ack_detection_int()
     {
-        EIFR |= (1 << INTF0);
-        EIMSK |= (1 << INT0);
+        GIFR |= (1 << PCIF);
+        GIMSK |= (1 << PCIE);
     }
 
     inline void disable_ack_detection_int()
     {
-        EIMSK &= ~(1 << INT0);
+        GIMSK &= ~(1 << PCIE);
     }
 
     inline void setup_ack_detection()
     {
-        EICRA = (EICRA & ~((1 << ISC00) | (1 << ISC01))) | (RISING << ISC00);
+        PCMSK |= (1 << PCINT4);
     }
 
     inline uint8_t roll_and_inverse_data(uint8_t data)
@@ -170,20 +169,19 @@ namespace amiga
 
     static void idle() {}
 
-    ISR(TIMER1_COMPA_vect)
+    ISR(TIM1_OVF_vect)
     {
         (*fsm.state)();
     }
 
-    ISR(INT0_vect)
+    ISR(PCINT0_vect)
     {
         const uint8_t lost_sync_code = 0xF9;
         const uint8_t initiate_power_up_stream_code = 0xFD;
         const uint8_t terminate_power_up_stream_code = 0xFE;
-        PORTB |= (1 << PIN0);
         disable_ack_detection_int();
         disable_timer_int();
-        if (fsm.state == send_one_bit)
+        if (PORTB & pins::amiga::DAT && fsm.state == send_one_bit)
         {
             if (fsm.fail_state > OK)
             {
@@ -209,7 +207,6 @@ namespace amiga
             {
                 // Serial.println("Key ACKed, idling");
                 fsm.state = idle;
-                PORTB &= ~(1 << PIN0);
                 return;
             }
             else if (fsm.sync_state == UNSYNCED)
@@ -231,15 +228,11 @@ namespace amiga
             setup_timer_for_frame();
             set_pins_as_output();
             enable_timer_int();
-            PORTB &= ~(1 << PIN0);
         }
     }
 
     void fsm::begin()
     {
-        // int debug pin
-        PORTB &= ~(1 << PIN0);
-        DDRB |= (1 << PIN0);
         setup_ack_detection();
         setup_timer();
         setup_timer_for_resync();
@@ -249,7 +242,8 @@ namespace amiga
         send_one_bit();
     }
 
-    bool fsm::is_ready() {
+    bool fsm::is_ready()
+    {
         return (state == idle) && (sync_state == TERMINATE_STREAM) && (fail_state == OK);
     }
 

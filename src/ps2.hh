@@ -3,9 +3,6 @@
 namespace ps2
 {
 
-    const size_t CLK_PIN = 3;
-    const size_t DAT_PIN = 4;
-
     const uint8_t CAPS_LOCK_SCANCODE = 0x58;
 
     void begin();
@@ -16,7 +13,7 @@ namespace ps2
         uint8_t scancode;
     };
 
-    template <typename T, size_t SIZE = 4>
+    template <typename T, uint8_t SIZE = 4>
     struct circular_buffer
     {
         struct iterator

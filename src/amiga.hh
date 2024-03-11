@@ -2,10 +2,7 @@
 
 namespace amiga
 {
-
-    const size_t CLK_PIN = 5;
-    const size_t DAT_PIN = 2;
-
+    
     void begin();
     bool send(uint8_t keycode);
     bool is_ready();

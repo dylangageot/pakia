@@ -1,10 +1,8 @@
-#define __AVR_ATmega328P__
-
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <Arduino.h>
 
 #include "ps2.hh"
+#include "pins.hh"
 
 namespace ps2
 {
@@ -14,47 +12,48 @@ namespace ps2
 
     inline static void set_pins_pull_up()
     {
-        DDRD &= ~((1 << CLK_PIN) | (1 << DAT_PIN));
-        PORTD |= (1 << CLK_PIN) | (1 << DAT_PIN);
+        DDRB &= ~(pins::ps2::CLK | pins::ps2::DAT);
+        PORTB |= pins::ps2::CLK | pins::ps2::DAT;
     }
 
     inline static void set_clk_low()
     {
-        PORTD &= ~(1 << CLK_PIN);
-        DDRD &= ~(1 << CLK_PIN);
+        PORTB &= ~pins::ps2::CLK;
+        DDRB |= pins::ps2::CLK;
     }
 
     inline static void setup_clk_detection_int()
     {
-        EICRA = (EICRA & ~((1 << ISC10) | (1 << ISC11))) | (FALLING << ISC10);
+        MCUCR = (MCUCR & ~((1 << ISC01) | (1 << ISC00))) | (1 << ISC01);
     }
 
     inline static void enable_clk_detection_int()
     {
-        EIMSK |= (1 << INT1);
+        GIFR |= (1 << INTF0);
+        GIMSK |= (1 << INT0);
     }
 
     inline void disable_clk_detection_int()
     {
-        EIMSK &= ~(1 << INT1);
+        GIMSK &= ~(1 << INT0);
     }
 
     inline void setup_timer()
     {
-        TCCR0A = 0;
+        TCCR0A = (1 << WGM01);
         TCCR0B = (1 << CS02) | (1 << CS00);
-        TCNT0 = 100;
+        TCNT0 = 155;
     }
 
     inline void enable_timer_int()
     {
-        TIFR0 &= ~(1 << TOV0);
-        TIMSK0 |= (1 << TOIE0);
+        TIFR |= (1 << OCF0A);
+        TIMSK |= (1 << OCIE0A);
     }
 
     inline void disable_timer_int()
     {
-        TIMSK0 &= ~(1 << TOIE0);
+        TIMSK &= ~(1 << OCIE0A);
     }
 
     inline void inhibit()
@@ -69,7 +68,7 @@ namespace ps2
     static void process_start_bit();
     static void process_stop_bit()
     {
-        if (!(PIND & (1 << DAT_PIN)))
+        if (!(PORTB & pins::ps2::DAT))
         {
             inhibit();
             return;
@@ -86,7 +85,7 @@ namespace ps2
 
     static void process_parity_bit()
     {
-        uint8_t read_parity = (PIND & (1 << DAT_PIN)) >> DAT_PIN;
+        uint8_t read_parity = (PORTB & pins::ps2::DAT) >> pins::ps2::DAT_PIN;
         uint8_t computed_parity = fsm.buffer;
         computed_parity ^= computed_parity >> 4;
         computed_parity ^= computed_parity >> 2;
@@ -103,13 +102,13 @@ namespace ps2
 
     static void process_data_bits()
     {
-        fsm.buffer |= ((PIND & (1 << DAT_PIN)) >> DAT_PIN) << fsm.counter++;
+        fsm.buffer |= ((PORTB & pins::ps2::DAT) >> pins::ps2::DAT_PIN) << fsm.counter++;
         fsm.state = (fsm.counter < 8) ? process_data_bits : process_parity_bit;
     }
 
     static void process_start_bit()
     {
-        if (PIND & (1 << DAT_PIN))
+        if (PORTB & pins::ps2::DAT)
         {
             inhibit();
             return;
@@ -132,12 +131,12 @@ namespace ps2
         enable_clk_detection_int();
     }
 
-    ISR(INT1_vect)
+    ISR(INT0_vect)
     {
         (*fsm.state)();
     }
 
-    ISR(TIMER0_OVERFLOW_vect)
+    ISR(TIM0_COMPA_vect)
     {
         disable_timer_int();
         fsm.state = process_start_bit;
