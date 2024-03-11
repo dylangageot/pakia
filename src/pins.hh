@@ -14,14 +14,14 @@ namespace pins
     namespace amiga
     {
         const uint8_t RST = 0;
-        const uint8_t CLK = 3;
-        const uint8_t DAT = 4;
+        const uint8_t CLK = 1 << 3;
+        const uint8_t DAT = 1 << 4;
     }
 
     namespace ps2
     {
-        const uint8_t DAT = 1;
-        const uint8_t CLK = 2;
+        const uint8_t DAT = 1 << 1;
+        const uint8_t CLK = 1 << 2;
     }
 
 } // namespace pins
