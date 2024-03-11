@@ -95,6 +95,7 @@ namespace amiga
     inline void setup_ack_detection()
     {
         PCMSK |= (1 << PCINT4);
+        disable_ack_detection_int();
     }
 
     inline uint8_t roll_and_inverse_data(uint8_t data)
@@ -179,55 +180,58 @@ namespace amiga
         const uint8_t lost_sync_code = 0xF9;
         const uint8_t initiate_power_up_stream_code = 0xFD;
         const uint8_t terminate_power_up_stream_code = 0xFE;
-        disable_ack_detection_int();
-        disable_timer_int();
-        if (PORTB & pins::amiga::DAT && fsm.state == send_one_bit)
+        if (PINB & pins::amiga::DAT)
         {
-            if (fsm.fail_state > OK)
+            disable_ack_detection_int();
+            disable_timer_int();
+            if (fsm.state == send_one_bit)
             {
-                if (fsm.fail_state == SEND_ONE_BIT)
+                if (fsm.fail_state > OK)
                 {
-                    // Serial.println("One bit frame got ACKed, send a lost sync code");
+                    if (fsm.fail_state == SEND_ONE_BIT)
+                    {
+                        // Serial.println("One bit frame got ACKed, send a lost sync code");
+                        fsm.bit_counter = 0;
+                        fsm.data = roll_and_inverse_data(lost_sync_code);
+                        fsm.fail_state = SEND_LOST_SYNC;
+                        fsm.state = frame_set_dat_bit;
+                    }
+                    else if (fsm.fail_state == SEND_LOST_SYNC)
+                    {
+                        // else resend data that failed to be send
+                        // Serial.println("Lost sync code got ACKed, send the original code");
+                        fsm.bit_counter = 0;
+                        fsm.data = fsm.data_to_recover;
+                        fsm.fail_state = OK;
+                        fsm.state = frame_set_dat_bit;
+                    }
+                }
+                else if (fsm.sync_state == TERMINATE_STREAM)
+                {
+                    // Serial.println("Key ACKed, idling");
+                    fsm.state = idle;
+                    return;
+                }
+                else if (fsm.sync_state == UNSYNCED)
+                {
+                    // Serial.println("One bit frame got ACKed, send a initiate power up stream code");
                     fsm.bit_counter = 0;
-                    fsm.data = roll_and_inverse_data(lost_sync_code);
-                    fsm.fail_state = SEND_LOST_SYNC;
+                    fsm.data = roll_and_inverse_data(initiate_power_up_stream_code);
+                    fsm.sync_state = INITIATE_STREAM;
                     fsm.state = frame_set_dat_bit;
                 }
-                else if (fsm.fail_state == SEND_LOST_SYNC)
+                else if (fsm.sync_state == INITIATE_STREAM)
                 {
-                    // else resend data that failed to be send
-                    // Serial.println("Lost sync code got ACKed, send the original code");
+                    // Serial.println("Initiate power up stream frame got ACKed, send a terminate stream code");
                     fsm.bit_counter = 0;
-                    fsm.data = fsm.data_to_recover;
-                    fsm.fail_state = OK;
+                    fsm.data = roll_and_inverse_data(terminate_power_up_stream_code);
+                    fsm.sync_state = TERMINATE_STREAM;
                     fsm.state = frame_set_dat_bit;
                 }
+                setup_timer_for_frame();
+                set_pins_as_output();
+                enable_timer_int();
             }
-            else if (fsm.sync_state == TERMINATE_STREAM)
-            {
-                // Serial.println("Key ACKed, idling");
-                fsm.state = idle;
-                return;
-            }
-            else if (fsm.sync_state == UNSYNCED)
-            {
-                // Serial.println("One bit frame got ACKed, send a initiate power up stream code");
-                fsm.bit_counter = 0;
-                fsm.data = roll_and_inverse_data(initiate_power_up_stream_code);
-                fsm.sync_state = INITIATE_STREAM;
-                fsm.state = frame_set_dat_bit;
-            }
-            else if (fsm.sync_state == INITIATE_STREAM)
-            {
-                // Serial.println("Initiate power up stream frame got ACKed, send a terminate stream code");
-                fsm.bit_counter = 0;
-                fsm.data = roll_and_inverse_data(terminate_power_up_stream_code);
-                fsm.sync_state = TERMINATE_STREAM;
-                fsm.state = frame_set_dat_bit;
-            }
-            setup_timer_for_frame();
-            set_pins_as_output();
-            enable_timer_int();
         }
     }
 
@@ -237,6 +241,8 @@ namespace amiga
         setup_timer();
         setup_timer_for_resync();
         set_pins_as_pull_up();
+        DDRB &= ~pins::amiga::RST;
+        PORTB &= ~pins::amiga::RST;
         fail_state = OK;
         sync_state = UNSYNCED;
         send_one_bit();
@@ -260,5 +266,4 @@ namespace amiga
         enable_timer_int();
         return true;
     }
-
 }

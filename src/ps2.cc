@@ -68,7 +68,7 @@ namespace ps2
     static void process_start_bit();
     static void process_stop_bit()
     {
-        if (!(PORTB & pins::ps2::DAT))
+        if (!(PINB & pins::ps2::DAT))
         {
             inhibit();
             return;
@@ -85,7 +85,7 @@ namespace ps2
 
     static void process_parity_bit()
     {
-        uint8_t read_parity = (PORTB & pins::ps2::DAT) >> pins::ps2::DAT_PIN;
+        uint8_t read_parity = (PINB & pins::ps2::DAT) >> pins::ps2::DAT_PIN;
         uint8_t computed_parity = fsm.buffer;
         computed_parity ^= computed_parity >> 4;
         computed_parity ^= computed_parity >> 2;
@@ -102,13 +102,13 @@ namespace ps2
 
     static void process_data_bits()
     {
-        fsm.buffer |= ((PORTB & pins::ps2::DAT) >> pins::ps2::DAT_PIN) << fsm.counter++;
+        fsm.buffer |= ((PINB & pins::ps2::DAT) >> pins::ps2::DAT_PIN) << fsm.counter++;
         fsm.state = (fsm.counter < 8) ? process_data_bits : process_parity_bit;
     }
 
     static void process_start_bit()
     {
-        if (PORTB & pins::ps2::DAT)
+        if (PINB & pins::ps2::DAT)
         {
             inhibit();
             return;

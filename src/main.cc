@@ -17,10 +17,9 @@ int main()
     ps2::receiver receiver;
     uint8_t last_scancode = 0;
     bool caps_lock = false;
-    char s[80];
-    ps2::event event;
     while (1)
     {
+        ps2::event event;
         while (amiga::is_ready() && receiver.consume(event))
         {
             uint8_t amiga_keycode = pgm_read_byte_near(ps2_scancode_to_amiga_keycode + event.scancode);
