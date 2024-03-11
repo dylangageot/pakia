@@ -1,5 +1,13 @@
 #pragma once
 
+// ATTiny85 pinout:
+//             +---\/---+
+//        PB5  |1*     8|  VCC
+//        PB3  |2      7|  PB2 (INT0)
+//        PB4  |3      6|  PB1
+//        GND  |4      5|  PB0
+//             +--------+
+
 namespace pins
 {
 
