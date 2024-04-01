@@ -98,9 +98,9 @@ void init_translation_map(uint8_t translation_map[256])
 
     // num pad
     translation_map[0x77] = 0x5A;            // (
-    translation_map[(1 << 7) | 0x4A] = 0x5C; // /
-    translation_map[0x7C] = 0x5D;            // *
-    translation_map[0x7B] = 0x4A;            // -
+    translation_map[(1 << 7) | 0x4A] = 0x5B; // )
+    translation_map[0x7C] = 0x5C;            // /
+    translation_map[0x7B] = 0x5D;            // *
     translation_map[0x6C] = 0x3D;            // 7
     translation_map[0x75] = 0x3E;            // 8
     translation_map[0x7D] = 0x3F;            // 9
