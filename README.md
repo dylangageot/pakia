@@ -11,7 +11,7 @@ PAKIA is yet another adapter circuit, taking a PS/2 keyboard interface in input,
 
 - Convert PS/2 scancode to Amiga scancode,
 - Handle lost synchronization and corresponding recovery,
-- Use the [Menu key](https://en.wikipedia.org/wiki/Menu_key) modifier to type a key that has been absorbed by a larger key on the PS/2 keyboard but is present on an Amiga keyboard.
+- Use the [Menu](https://en.wikipedia.org/wiki/Menu_key) modifier key to type a key that has been absorbed by a larger key on the PS/2 keyboard but is present on an Amiga keyboard.
 
 ## Under the hood
 
