@@ -1,6 +1,6 @@
 # derived from https://gist.github.com/ryanleary/8250880
 
-PROJECT    = pstwo2amiga
+PROJECT    = pakia
 VERSION	   = 0.1.0
 NAME	   = $(PROJECT)-$(VERSION)
 
