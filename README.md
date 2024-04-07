@@ -17,7 +17,7 @@ I started this project blindly, without searching if anyone made one before.
 Frankly, it was appealing to my eye, so why not?
 I found documentation on both keyboard interfaces and started developing a proof of concept on an Arduino Uno board, based on an ATmega328p.
 
-I discovered many of them once I had finished the prototype for PAKIA and wanted to design a PCB for it, without eventually a lighter microcontroller than the ATmega328p.
+I discovered many of them once I had finished the prototype for PAKIA and wanted to design a PCB for it, with eventually a lighter microcontroller than the ATmega328p.
 Here is a list of related open-source projects and their respective solutions:
 
 - [AKAB](https://gitlab.com/hkzlab-retrocomputing/AKAB_Reloaded) by [hkzlabnet](http://mercatopo-en.blogspot.com/)
