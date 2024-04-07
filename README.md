@@ -1,6 +1,7 @@
 # PS/2 to Amiga Keyboard Interface Adapter (PAKIA)
 
 Standalone Amiga keyboards are more than ever difficult to find, especially due to the increased perceived value of Amiga computers and peripherals on the second-hand market.
+
 Unfortunately, the keyboard interface used by Commodore is proprietary, see the [Amiga keyboard interface documentation](http://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node0172.html).
 Even though it uses the same 5-pin DIN 41524 connector as IBM AT keyboards, the keyboard interface is still different and therefore not compatible with any easy-to-find PC-compatible keyboards.
 
