@@ -32,15 +32,23 @@ The binary currently weighs 2KB, in that regard, one could choose to use an ATti
 
 ## Build and deploy
 
-> Warning: The build system is only available on Linux.
+> **Warning:** The build system is only available on Linux.
 
-> Required: `avr-gcc` and `avrdude`, respectively 5.4.0 and 6.3-20171130 on my setup.
+> **Required:** `avr-gcc` and `avrdude`, respectively 5.4.0 and 6.3-20171130 on my setup.
 
+The project uses C++ mainly to benefit from namespaces.
 
 1. Specify the programmer to use with `avrdude` in the Makefile, with the variable `PROGRAMMER`.
 2. Build with `make`.
-3. Deploy with `make flash` while your programmer is wired to the ISP connector on the PAKIA PCB.
+3. Deploy with `make flash` while your programmer is wired to the ISP connector on the PCB.
 
+The lookup table to convert PS/2 scancode to Amiga ones is hard-coded in `src/translation_map.hh`.
+A tool called `translation-map-generator` can be built from the `tools` directory.
+By modifying the source code, one can generate other hard-coded LUT from a readable code.
+
+##  Schematic and PCB
+
+The schematic and PCB were drawn in KiCAD. The project is available in the `hardware` directory.
 
 ## Other solutions
 
