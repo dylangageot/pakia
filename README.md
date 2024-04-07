@@ -44,7 +44,12 @@ The project uses C++ mainly to benefit from namespaces.
 
 The lookup table to convert PS/2 scancode to Amiga ones is hard-coded in `src/translation_map.hh`.
 A tool called `translation-map-generator` can be built from the `tools` directory.
-By modifying the source code, one can generate other hard-coded LUT from a readable code.
+By modifying the source code, one can generate other hard-coded LUT from a readable code:
+
+```bash
+(cd tools && make)
+tools/translation-map-generator > src/translation_map.hh
+```
 
 ##  Schematic and PCB
 

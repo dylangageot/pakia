@@ -122,6 +122,7 @@ int main()
     init_translation_map(translation_map);
 
     std::cout << "#pragma once" << std::endl << std::endl;
+    std::cout << "#include <avr/pgmspace.h>" << std::endl << std::endl;
     std::cout << "const uint8_t ps2_scancode_to_amiga_keycode[256] PROGMEM = {" << std::endl;
     for (int i = 0; i < 256; i += 8)
     {
