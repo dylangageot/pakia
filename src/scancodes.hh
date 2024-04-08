@@ -1,9 +1,9 @@
 #pragma once
 
-namespace scancodes
-{
-    namespace ps2
-    {
+namespace scancodes {
+
+    namespace ps2 {
+
         const uint8_t ESC = 0x76;
         const uint8_t F1 = 0x05;
         const uint8_t F2 = 0x06;
@@ -106,8 +106,8 @@ namespace scancodes
         const uint8_t NUM_DOT = 0x71;
         const uint8_t NUM_KP_EQUAL = 0x63;
 
-        namespace extended
-        {
+        namespace extended {
+
             const uint8_t LEFT_OS = 0x1F | 0x80;
             const uint8_t RIGHT_ALT = 0x11 | 0x80;
             const uint8_t RIGHT_OS = 0x27 | 0x80;
@@ -131,13 +131,12 @@ namespace scancodes
             const uint8_t MUTE = 0x23 | 0x80;
 
             const uint8_t NUM_SLASH = 0x4A | 0x80;
-            const uint8_t NUM_ENTER = 0x5A | 0x80;    
-        }
-    }
+            const uint8_t NUM_ENTER = 0x5A | 0x80;
 
-    namespace amiga
-    {
+        } // namespace extended
 
-    }
+    } // namespace ps2
 
-} // namespace scancode
+    namespace amiga {}
+
+} // namespace scancodes

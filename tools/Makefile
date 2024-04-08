@@ -1,7 +1,7 @@
 CXX ?= g++
 
 translation-map-generator: translation_map_generator.cc
-	$(CXX) $^ -o $@
+	$(CXX) -I.. $^ -o $@
 
 clean:
 	rm -rf translation-map-generator
