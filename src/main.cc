@@ -3,6 +3,7 @@
 
 #include "ps2.hh"
 #include "amiga.hh"
+#include "scancodes.hh"
 #include "translation_map.hh"
 
 int main()
@@ -25,13 +26,14 @@ int main()
         {
             uint8_t amiga_keycode = pgm_read_byte_near(ps2_scancode_to_amiga_keycode + event.scancode);
 
-            if (event.scancode == ((1 << 7) | 0x2F))
+            if (event.scancode == scancodes::ps2::extended::MENU)
             {
                 alt_num_pad = event.event_kind == ps2::event_kind::PRESSED;
             }
 
             // drop any unknown key
-            if ((event.scancode != 0x0E) && (amiga_keycode == 0))
+            // backquote correspondance in Amiga scancode is 0, we need to ensure that backquote can be pressed anyway
+            if ((event.scancode != scancodes::ps2::BACKQUOTE) && (amiga_keycode == 0))
             {
                 continue;
             }
@@ -45,7 +47,7 @@ int main()
             if ((event.event_kind == ps2::event_kind::PRESSED) && (event.scancode != last_scancode))
             {
                 last_scancode = event.scancode;
-                if (event.scancode == ps2::CAPS_LOCK_SCANCODE)
+                if (event.scancode == scancodes::ps2::CAPS_LOCK)
                 {
                     caps_lock = !caps_lock;
                     amiga::send(amiga_keycode | (caps_lock ? (1 << 7) : 0));
@@ -61,7 +63,7 @@ int main()
                 {
                     last_scancode = 0;
                 }
-                if (event.scancode != ps2::CAPS_LOCK_SCANCODE)
+                if (event.scancode != scancodes::ps2::CAPS_LOCK)
                 {
                     amiga::send(amiga_keycode | 1 << 7);
                 }

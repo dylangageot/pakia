@@ -3,8 +3,6 @@
 namespace ps2
 {
 
-    const uint8_t CAPS_LOCK_SCANCODE = 0x58;
-
     void begin();
 
     struct frame
