@@ -8,21 +8,22 @@
 //        GND  |4      5|  PB0
 //             +--------+
 
-namespace pins
-{
+namespace pins {
 
-    namespace amiga
-    {
+    namespace amiga {
+
         const uint8_t RST = 0;
         const uint8_t CLK = 1 << 3;
         const uint8_t DAT = 1 << 4;
-    }
 
-    namespace ps2
-    {
+    } // namespace amiga
+
+    namespace ps2 {
+
         const uint8_t DAT_PIN = 1;
         const uint8_t DAT = 1 << DAT_PIN;
         const uint8_t CLK = 1 << 2;
-    }
+
+    } // namespace ps2
 
 } // namespace pins

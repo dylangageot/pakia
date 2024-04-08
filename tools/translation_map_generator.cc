@@ -100,7 +100,7 @@ auto init_translation_map(uint8_t translation_map[256]) -> void {
 
     // num pad
     translation_map[ps2::NUM_LOCK] = 0x5A;            // (
-    translation_map[ps2::extended::NUM_SLASH] = 0x5B;     // )
+    translation_map[ps2::extended::NUM_SLASH] = 0x5B; // )
     translation_map[ps2::NUM_ASTERISK] = 0x5C;        // /
     translation_map[ps2::NUM_MINUS] = 0x5D;           // *
     translation_map[ps2::NUM_SEVEN] = 0x3D;           // 7

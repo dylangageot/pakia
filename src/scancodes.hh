@@ -137,6 +137,10 @@ namespace scancodes {
 
     } // namespace ps2
 
-    namespace amiga {}
+    namespace amiga {
+
+        // todo(gageotd): do the same for amiga scancodes.
+
+    }
 
 } // namespace scancodes
