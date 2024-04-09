@@ -164,6 +164,7 @@ namespace scancodes {
         const uint8_t ZERO = 0x0A;
         const uint8_t HYPHEN = 0x0B;
         const uint8_t EQUAL = 0x0C;
+        const uint8_t BACKSLASH = 0x0D;
         const uint8_t BACKSPACE = 0x41;
 
         const uint8_t TAB = 0x42;
