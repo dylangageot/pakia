@@ -232,6 +232,7 @@ namespace scancodes {
         const uint8_t NUM_EIGHT = 0x3E;
         const uint8_t NUM_NINE = 0x3F;
         const uint8_t NUM_PLUS = 0x5E;
+        const uint8_t NUM_MINUS = 0x4A;
         const uint8_t NUM_FOUR = 0x2D;
         const uint8_t NUM_FIVE = 0x2E;
         const uint8_t NUM_SIX = 0x2F;

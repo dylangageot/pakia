@@ -89,7 +89,7 @@ auto init_translation_map(uint8_t translation_map[256]) -> void {
     translation_map[ps2::extended::DOWN] = amiga::DOWN;
     translation_map[ps2::extended::LEFT] = amiga::LEFT;
     translation_map[ps2::extended::RIGHT] = amiga::RIGHT;
-    
+
     translation_map[ps2::NUM_LOCK] = amiga::NUM_OPENED_PARENTHESIS;
     translation_map[ps2::extended::NUM_SLASH] = amiga::NUM_CLOSED_PARENTHESIS;
     translation_map[ps2::NUM_ASTERISK] = amiga::NUM_SLASH;
@@ -115,7 +115,7 @@ int main() {
 
     std::cout << "#pragma once" << std::endl << std::endl;
     std::cout << "#include <avr/pgmspace.h>" << std::endl << std::endl;
-    std::cout << "const uint8_t ps2_scancode_to_amiga_keycode[256] PROGMEM = {"
+    std::cout << "const uint8_t ps2_to_amiga_scancode[256] PROGMEM = {"
               << std::endl;
     for (int i = 0; i < 256; i += 8) {
         std::cout << "    ";
