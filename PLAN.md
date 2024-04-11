@@ -114,4 +114,10 @@ Wait for acknowledgment from the Amiga by setting up an interrupt on the falling
          in this case, we could use a cool ATTiny!
          ATTiny85 seems low on SRAM...
 - ✅ Make a PCB
+- ⬛ Design revision 2 using a dedicated DIN socket on the PCB, 
+        - ✅ Add footprint for DIN 5PIN
+        - ⬛ Add pad for wire soldering of amiga cable without hole
+        - ⬛ Add dedicated ISP AVR socket
+        - ⬛ Make hole for a 3D model case
+
 
