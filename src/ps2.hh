@@ -1,42 +1,10 @@
 #pragma once
 
+#include "circular_buffer.hh"
+
 namespace ps2 {
 
     void begin();
-
-    struct frame {
-        bool available;
-        uint8_t scancode;
-    };
-
-    template <typename T, uint8_t SIZE = 4> struct circular_buffer {
-        struct iterator {
-            iterator(volatile T *begin_ptr)
-                : _elem_ptr(begin_ptr), _begin_ptr(begin_ptr),
-                  _end_ptr(begin_ptr + SIZE) {}
-
-            inline volatile T *get() { return _elem_ptr; }
-
-            inline volatile T *next() {
-                _elem_ptr = (++_elem_ptr >= _end_ptr) ? _begin_ptr : _elem_ptr;
-                return _elem_ptr;
-            }
-
-          private:
-            volatile T *_elem_ptr;
-            volatile T *_begin_ptr;
-            volatile T *_end_ptr;
-        };
-
-        inline iterator &write_iterator() { return _write_iterator; }
-
-        inline iterator &read_iterator() { return _read_iterator; }
-
-      private:
-        volatile T _buffer[SIZE];
-        iterator _write_iterator = iterator(_buffer);
-        iterator _read_iterator = iterator(_buffer);
-    };
 
     struct fsm {
         void (*state)();

@@ -6,7 +6,7 @@
 
 namespace ps2 {
 
-    struct circular_buffer<frame> frames;
+    struct circular_buffer<uint8_t, 8> scancodes;
     struct fsm fsm;
 
     inline static void set_pins_pull_up() {
@@ -57,14 +57,12 @@ namespace ps2 {
             inhibit();
             return;
         }
-        volatile frame *frame = frames.write_iterator().get();
-        // save data
-        frame->scancode = fsm.buffer;
-        frame->available = true;
-        // move to next frame pointer, make it unavailable
-        frames.write_iterator().next();
-        // reset counter to idle
-        fsm.state = process_start_bit;
+        if (scancodes.write(&fsm.buffer)) {
+            fsm.state = process_start_bit;
+        } else {
+            // if circular buffer is full, inhibit keyboard scancode reception
+            inhibit();
+        }
     }
 
     static void process_parity_bit() {
@@ -125,11 +123,7 @@ namespace ps2 {
     }
 
     bool receiver::consume(event &event) {
-        volatile frame *frame = frames.read_iterator().get();
-        if (frame->available) {
-            _last_scancode_fed = frame->scancode;
-            frame->available = false;
-            frames.read_iterator().next();
+        if (scancodes.read(&_last_scancode_fed)) {
             if (_last_scancode_fed == 0xF0) {
                 _is_released = true;
             } else if (_last_scancode_fed == 0xE0) {
