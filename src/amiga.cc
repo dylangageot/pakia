@@ -203,7 +203,7 @@ namespace amiga {
     }
 
     bool fsm::is_ready() {
-        return (sync_state == TERMINATE_STREAM) &&
+        return (state == idle) && (sync_state == TERMINATE_STREAM) &&
                (fail_state == OK);
     }
 
