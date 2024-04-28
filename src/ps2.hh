@@ -1,7 +1,5 @@
 #pragma once
 
-#include "circular_buffer.hh"
-
 namespace ps2 {
 
     void begin();

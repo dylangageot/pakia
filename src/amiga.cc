@@ -2,14 +2,28 @@
 #include <avr/io.h>
 
 #include "amiga.hh"
+#include "circular_buffer.hh"
 #include "pins.hh"
 
 namespace amiga {
+
+    struct circular_buffer<uint8_t, 8> scancodes;
     struct fsm fsm;
 
     void begin() { fsm.begin(); }
 
-    bool send(uint8_t keycode) { return fsm.send(keycode); }
+    inline uint8_t roll_and_inverse_data(uint8_t data) {
+        return ~((data << 1) | (data >> 7));
+    }
+
+    bool send(uint8_t keycode) {
+        keycode = roll_and_inverse_data(keycode);
+        if (scancodes.write(&keycode)) {
+            return fsm.trigger_send();
+        } else {
+            return false;
+        }
+    }
 
     bool is_ready() { return fsm.is_ready(); }
 
@@ -69,10 +83,6 @@ namespace amiga {
     inline void setup_ack_detection() {
         PCMSK |= (1 << PCINT4);
         disable_ack_detection_int();
-    }
-
-    inline uint8_t roll_and_inverse_data(uint8_t data) {
-        return ~((data << 1) | (data >> 7));
     }
 
     static void frame_set_dat_bit();
@@ -163,9 +173,14 @@ namespace amiga {
                         fsm.state = frame_set_dat_bit;
                     }
                 } else if (fsm.sync_state == TERMINATE_STREAM) {
-                    // Serial.println("Key ACKed, idling");
-                    fsm.state = idle;
-                    return;
+                    // still data to send?
+                    if (scancodes.read(&fsm.data)) {
+                        fsm.bit_counter = 0;
+                        fsm.state = frame_set_dat_bit;
+                    } else {
+                        fsm.state = idle;
+                        return;
+                    }
                 } else if (fsm.sync_state == UNSYNCED) {
                     // Serial.println("One bit frame got ACKed, send a initiate
                     // power up stream code");
@@ -203,19 +218,16 @@ namespace amiga {
     }
 
     bool fsm::is_ready() {
-        return (state == idle) && (sync_state == TERMINATE_STREAM) &&
-               (fail_state == OK);
+        return (sync_state == TERMINATE_STREAM) && (fail_state == OK);
     }
 
-    bool fsm::send(uint8_t keycode) {
-        if (!is_ready()) {
-            return false;
+    bool fsm::trigger_send() {
+        if (state == idle) {
+            scancodes.read(&data);
+            state = begin_transfer;
+            setup_timer_for_frame();
+            enable_timer_int();
         }
-        // roll out data and reverse bit
-        data = roll_and_inverse_data(keycode);
-        state = begin_transfer;
-        setup_timer_for_frame();
-        enable_timer_int();
         return true;
     }
 } // namespace amiga

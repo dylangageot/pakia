@@ -20,7 +20,7 @@ namespace amiga {
 
         void begin();
         bool is_ready();
-        bool send(uint8_t keycode);
+        bool trigger_send();
     };
 
 } // namespace amiga

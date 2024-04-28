@@ -1,8 +1,9 @@
 #include <avr/interrupt.h>
 #include <avr/io.h>
 
-#include "pins.hh"
 #include "ps2.hh"
+#include "circular_buffer.hh"
+#include "pins.hh"
 
 namespace ps2 {
 
