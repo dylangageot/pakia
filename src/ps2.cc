@@ -1,14 +1,21 @@
 #include <avr/interrupt.h>
 #include <avr/io.h>
 
-#include "ps2.hh"
 #include "circular_buffer.hh"
 #include "pins.hh"
+#include "ps2.hh"
 
 namespace ps2 {
 
     struct circular_buffer<uint8_t, 8> scancodes;
-    struct fsm fsm;
+
+    struct fsm {
+        void (*state)();
+        uint8_t buffer;
+        uint8_t counter;
+
+        void begin();
+    } fsm;
 
     inline static void set_pins_pull_up() {
         DDRB &= ~(pins::ps2::CLK | pins::ps2::DAT);

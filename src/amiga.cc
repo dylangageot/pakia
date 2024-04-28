@@ -8,7 +8,19 @@
 namespace amiga {
 
     struct circular_buffer<uint8_t, 8> scancodes;
-    struct fsm fsm;
+
+    struct fsm {
+        void (*state)();
+        uint8_t data;
+        uint8_t data_to_recover;
+        uint8_t bit_counter;
+        enum fail_state fail_state;
+        enum sync_state sync_state;
+
+        void begin();
+        bool is_ready();
+        bool trigger_send();
+    } fsm;
 
     void begin() { fsm.begin(); }
 

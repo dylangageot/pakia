@@ -4,14 +4,6 @@ namespace ps2 {
 
     void begin();
 
-    struct fsm {
-        void (*state)();
-        uint8_t buffer;
-        uint8_t counter;
-
-        void begin();
-    };
-
     enum event_kind { PRESSED = 0, RELEASED = 1 };
 
     struct event {
