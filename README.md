@@ -8,8 +8,8 @@ Even though it uses the same 5-pin DIN 41524 connector as IBM AT keyboards, the 
 PAKIA is yet another adapter circuit, taking a PS/2 keyboard interface in input, and translating it into the Amiga keyboard interface in output.
 
 <p align="center">
-  <img  src="resources/pcb.png">
-  <img  src="resources/whole_adapter.png">
+  <img height="380" src="resources/pcb.png">
+  <img height="380" src="resources/whole_adapter.png">
 </p>
 
 ## Features
