@@ -7,42 +7,37 @@
 #include "scancodes.hh"
 #include "translation_map.hh"
 
-int main() {
-    // Enable pull-up resistors.
-    MCUCR &= ~(1 << PUD);
-    // Set to zero previous watch-dog trigerring flag and disable watch-dog
-    // timer.
-    MCUSR &= ~(1 << WDRF);
+void setup() {
+    MCUCR &= ~(1 << PUD);  // Enable pull-up resistors.
+    MCUSR &= ~(1 << WDRF); // reset Watchdog reset flag
     wdt_disable();
-    // Enable interrupts.
     sei();
-
     ps2::begin();
     amiga::begin();
+}
 
+int main() {
     ps2::receiver receiver;
     ps2::event event;
-
     uint8_t last_scancode = 0;
     uint8_t reset_combo = 0;
     bool caps_lock = false;
     bool alt_num_pad = false;
 
+    setup();
     while (1) {
         if (receiver.consume(event)) {
-
             { // Reset detection
                 namespace scps2 = scancodes::ps2;
-                uint8_t reset_key =
-                    (event.scancode == scps2::LEFT_CTRL ? 1 : 0) |
-                    (event.scancode == scps2::extended::LEFT_OS ? 2 : 0) |
-                    (event.scancode == scps2::extended::RIGHT_OS ? 4 : 0);
-
                 enum {
                     COMBO_PRESSED = 7,
                     RESET_REQUEST_SENT = 1 << 3,
                     COMBO_RELEASED = 1 << 4
                 };
+                uint8_t reset_key =
+                    (event.scancode == scps2::LEFT_CTRL ? 1 : 0) |
+                    (event.scancode == scps2::extended::LEFT_OS ? 2 : 0) |
+                    (event.scancode == scps2::extended::RIGHT_OS ? 4 : 0);
 
                 // Detect reset combo (Ctrl + Left Amiga + Right Amiga).
                 if (reset_key && !(reset_combo & COMBO_RELEASED)) {
@@ -62,12 +57,12 @@ int main() {
                     }
                 }
             }
-
             if (amiga::is_ready()) {
                 // Translate PS/2 to Amiga scancode.
                 uint8_t amiga_scancode =
                     pgm_read_byte_near(ps2_to_amiga_scancode + event.scancode);
 
+                // Detect alternative key (Menu).
                 if (event.scancode == scancodes::ps2::extended::MENU) {
                     alt_num_pad = event.event_kind == ps2::event_kind::PRESSED;
                 }
@@ -93,7 +88,9 @@ int main() {
                     last_scancode = event.scancode;
                     if (event.scancode == scancodes::ps2::CAPS_LOCK) {
                         caps_lock = !caps_lock;
-                        amiga::send(amiga_scancode | (caps_lock ? 1 << 7 : 0));
+                        amiga::send(
+                            amiga_scancode |
+                            (caps_lock ? amiga::KEY_UP : amiga::KEY_DOWN));
                     } else {
                         amiga::send(amiga_scancode);
                     }
@@ -102,7 +99,7 @@ int main() {
                         last_scancode = 0;
                     }
                     if (event.scancode != scancodes::ps2::CAPS_LOCK) {
-                        amiga::send(amiga_scancode | 1 << 7);
+                        amiga::send(amiga_scancode | amiga::KEY_UP);
                     }
                 }
             }
