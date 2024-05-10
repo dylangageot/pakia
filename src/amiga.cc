@@ -8,6 +8,11 @@
 
 namespace amiga {
 
+    const uint8_t lost_sync_code = 0xF9;
+    const uint8_t initiate_power_up_stream_code = 0xFD;
+    const uint8_t terminate_power_up_stream_code = 0xFE;
+    const uint8_t reset_warning = 0x78;
+
     enum sync_state {
         UNSYNCED = 0,
         INITIATE_STREAM,
@@ -26,16 +31,21 @@ namespace amiga {
     static void (*state)();
     static uint8_t data;
     static uint8_t data_to_recover;
-    static uint8_t bit_counter;
+    static uint8_t counter;
     static enum sync_state sync_state;
     static uint8_t user_ready_hard_reset;
 
-    inline void setup_timer() {
+    static inline void setup_reset_pin() {
+        DDRB &= ~pins::amiga::RST;
+        PORTB &= ~pins::amiga::RST;
+    }
+
+    static inline void setup_timer() {
         TCCR1 = (1 << PWM1A);
         GTCCR &= (1 << TSM) | (1 << PSR0);
     }
 
-    inline void setup_timer_for_frame() {
+    static inline void setup_timer_for_frame() {
         TCCR1 =
             (TCCR1 & ~((1 << CS13) | (1 << CS12) | (1 << CS11) | (1 << CS10))) |
             (1 << CS10);
@@ -43,66 +53,60 @@ namespace amiga {
         TCNT1 = 0;
     }
 
-    inline void setup_timer_for_resync() {
-        // 8192 prescaler
+    static inline void setup_timer_for_resync() {
         TCCR1 =
             (TCCR1 & ~((1 << CS13) | (1 << CS12) | (1 << CS11) | (1 << CS10))) |
-            (1 << CS13) | (1 << CS12) | (1 << CS11);
+            (1 << CS13) | (1 << CS12) | (1 << CS11); // 8192 prescaler
         OCR1C = 138;
         TCNT1 = 0;
     }
 
-    inline void setup_timer_for_hard_reset() {
-        // 8192 prescaler
+    static inline void setup_timer_for_hard_reset() {
         TCCR1 =
             (TCCR1 & ~((1 << CS13) | (1 << CS12) | (1 << CS11) | (1 << CS10))) |
-            (1 << CS13) | (1 << CS12) | (1 << CS11);
+            (1 << CS13) | (1 << CS12) | (1 << CS11); // 8192 prescaler
         OCR1C = 243;
         TCNT1 = 0;
     }
 
-    inline void enable_timer_int() {
+    static inline void enable_timer_int() {
         TIFR |= (1 << TOV1);
         TIMSK |= (1 << TOIE1);
     }
 
-    inline void disable_timer_int() { TIMSK &= ~(1 << TOIE1); }
+    static inline void disable_timer_int() { TIMSK &= ~(1 << TOIE1); }
 
-    inline void set_pins_as_pull_up() {
+    static inline void set_pins_as_pull_up() {
         DDRB &= ~(pins::amiga::CLK | pins::amiga::DAT);
         PORTB |= pins::amiga::CLK | pins::amiga::DAT;
     }
 
-    inline void set_pins_as_output() {
+    static inline void set_pins_as_output() {
         DDRB |= pins::amiga::CLK | pins::amiga::DAT;
         PORTB |= pins::amiga::CLK | pins::amiga::DAT;
     }
 
-    inline void set_dat_bit(uint8_t bit) {
+    static inline void set_dat_bit(uint8_t bit) {
         PORTB = (PORTB & ~pins::amiga::DAT) | ((bit) ? pins::amiga::DAT : 0);
     }
 
-    inline void set_clk_high() { PORTB |= pins::amiga::CLK; }
+    static inline void set_clk_high() { PORTB |= pins::amiga::CLK; }
 
-    inline void set_clk_low() { PORTB &= ~pins::amiga::CLK; }
+    static inline void set_clk_low() { PORTB &= ~pins::amiga::CLK; }
 
-    inline void enable_ack_detection_int() {
+    static inline void enable_ack_detection_int() {
         GIFR |= (1 << PCIF);
         GIMSK |= (1 << PCIE);
     }
 
-    inline void disable_ack_detection_int() { GIMSK &= ~(1 << PCIE); }
+    static inline void disable_ack_detection_int() { GIMSK &= ~(1 << PCIE); }
 
-    inline void setup_ack_detection() {
+    static inline void setup_ack_detection() {
         PCMSK |= (1 << PCINT4);
         disable_ack_detection_int();
     }
 
-    inline uint8_t roll_and_inverse_data(uint8_t data) {
-        return ~((data << 1) | (data >> 7));
-    }
-
-    void _release_reset() {
+    static inline void try_hard_reset() {
         if ((sync_state == TIMER_READY_HARD_RESET) && user_ready_hard_reset) {
             set_clk_high();
             cli();
@@ -113,40 +117,69 @@ namespace amiga {
         }
     }
 
-    void release_reset() {
-        user_ready_hard_reset = 1;
-        _release_reset();
+    static inline uint8_t roll_and_inverse_data(const uint8_t &data) {
+        return ~((data << 1) | (data >> 7));
     }
 
     static void frame_set_dat_bit();
-    static void frame_set_clk_low();
-    static void frame_set_clk_high();
-    static void begin_transfer();
-    static void end_transfer();
-    static void send_one_bit();
-    static void hard_reset();
-    static void wait_for_hard_reset();
-    static void idle();
 
-    static void begin_transfer() {
-        bit_counter = 0;
-        set_pins_as_output();
+    static inline void send_scancode(const uint8_t &to_send,
+                                     const uint8_t &roll_and_inverse = 1,
+                                     const uint8_t &bit_count = 8) {
+        data = roll_and_inverse ? roll_and_inverse_data(to_send) : to_send;
+        counter = 8 - bit_count;
         state = frame_set_dat_bit;
+        setup_timer_for_frame();
+        set_pins_as_output();
+        enable_timer_int();
     }
+
+    static void frame_set_clk_low();
 
     static void frame_set_dat_bit() {
-        set_dat_bit(data & (128 >> bit_counter));
+        set_dat_bit(data & (128 >> counter));
         state = frame_set_clk_low;
     }
+
+    static void frame_set_clk_high();
 
     static void frame_set_clk_low() {
         set_clk_low();
         state = frame_set_clk_high;
     }
 
+    static void end_transfer();
+
     static void frame_set_clk_high() {
         set_clk_high();
-        state = (++bit_counter < 8) ? frame_set_dat_bit : end_transfer;
+        state = (++counter < 8) ? frame_set_dat_bit : end_transfer;
+    }
+
+    static void wait_for_500_ms() {
+        counter++;
+        if (counter > 2) {
+            disable_timer_int();
+            sync_state = TIMER_READY_HARD_RESET;
+            try_hard_reset();
+        }
+    }
+
+    static void hard_reset() {
+        set_pins_as_output();
+        set_clk_low();
+        counter = 0;
+        state = wait_for_500_ms;
+        enable_timer_int();
+    }
+
+    static void send_one_bit() {
+        disable_timer_int();
+        disable_ack_detection_int();
+        if (sync_state != UNSYNCED) {
+            sync_state = SEND_ONE_BIT;
+            data_to_recover = data;
+        }
+        send_scancode(0, 0, 1);
     }
 
     static void end_transfer() {
@@ -164,46 +197,12 @@ namespace amiga {
         enable_ack_detection_int();
     }
 
-    static void send_one_bit() {
-        disable_timer_int();
-        disable_ack_detection_int();
-        if (sync_state != UNSYNCED) {
-            sync_state = SEND_ONE_BIT;
-            data_to_recover = data;
-        }
-        bit_counter = 7;
-        data = 0;
-        state = frame_set_dat_bit;
-        setup_timer_for_frame();
-        set_pins_as_output();
-        enable_timer_int();
-    }
-
     static void wait_for_hard_reset() {
-        bit_counter++;
-        // 40 * 250ms = 10s.
-        if (bit_counter > 40) {
+        if (++counter > 40) { // 40 * 250ms = 10s.
             disable_timer_int();
             disable_ack_detection_int();
             hard_reset();
         }
-    }
-
-    static void wait_for_500_ms() {
-        bit_counter++;
-        if (bit_counter > 2) {
-            disable_timer_int();
-            sync_state = TIMER_READY_HARD_RESET;
-            _release_reset();
-        }
-    }
-
-    static void hard_reset() {
-        set_pins_as_output();
-        set_clk_low();
-        bit_counter = 0;
-        state = wait_for_500_ms;
-        enable_timer_int();
     }
 
     static void idle() {}
@@ -211,64 +210,53 @@ namespace amiga {
     ISR(TIM1_OVF_vect) { (*state)(); }
 
     ISR(PCINT0_vect) {
-        const uint8_t lost_sync_code = 0xF9;
-        const uint8_t initiate_power_up_stream_code = 0xFD;
-        const uint8_t terminate_power_up_stream_code = 0xFE;
-        const uint8_t reset_warning = 0x78;
         // on rising edge of the acknowledment period from the Amiga
         if (PINB & pins::amiga::DAT) {
             disable_ack_detection_int();
             disable_timer_int();
-            if (sync_state == SEND_ONE_BIT) {
-                bit_counter = 0;
-                data = roll_and_inverse_data(lost_sync_code);
-                sync_state = SEND_LOST_SYNC;
-                state = frame_set_dat_bit;
-            } else if (sync_state == SEND_LOST_SYNC) {
-                bit_counter = 0;
-                data = data_to_recover;
-                sync_state = SEND_LOST_DATA;
-                state = frame_set_dat_bit;
-            } else if ((sync_state == TERMINATE_STREAM) || (sync_state == SEND_LOST_DATA)) {
+            switch (sync_state) {
+            case UNSYNCED:
+                sync_state = INITIATE_STREAM;
+                send_scancode(initiate_power_up_stream_code);
+                break;
+            case INITIATE_STREAM:
+                sync_state = TERMINATE_STREAM;
+                send_scancode(terminate_power_up_stream_code);
+                break;
+            case TERMINATE_STREAM:
+            case SEND_LOST_DATA:
+            case SYNCED:
                 sync_state = SYNCED;
-                state = idle;
-                return;
-            } else if (sync_state == SYNCED) {
-                if (scancodes.read(&data)) {
-                    bit_counter = 0;
-                    state = frame_set_dat_bit;
+                if (scancodes.read(data)) {
+                    send_scancode(data);
                 } else {
                     state = idle;
-                    return;
                 }
-            } else if (sync_state == UNSYNCED) {
-                bit_counter = 0;
-                data = roll_and_inverse_data(initiate_power_up_stream_code);
-                sync_state = INITIATE_STREAM;
-                state = frame_set_dat_bit;
-            } else if (sync_state == INITIATE_STREAM) {
-                bit_counter = 0;
-                data = roll_and_inverse_data(terminate_power_up_stream_code);
-                sync_state = TERMINATE_STREAM;
-                state = frame_set_dat_bit;
-            } else if (sync_state == FIRST_RESET_WARNING) {
-                bit_counter = 0;
-                data = roll_and_inverse_data(reset_warning);
+                break;
+            case SEND_ONE_BIT:
+                sync_state = SEND_LOST_SYNC;
+                send_scancode(lost_sync_code);
+                break;
+            case SEND_LOST_SYNC:
+                sync_state = SEND_LOST_DATA;
+                send_scancode(data_to_recover,
+                              0 /* do not roll and inverse bit */);
+                break;
+            case FIRST_RESET_WARNING:
                 sync_state = SECOND_RESET_WARNING;
-                state = frame_set_dat_bit;
-            } else if (sync_state == SECOND_RESET_WARNING) {
+                send_scancode(reset_warning);
+                break;
+            case SECOND_RESET_WARNING:
                 hard_reset();
-                return;
+            default:
+                break;
             }
-            setup_timer_for_frame();
-            set_pins_as_output();
-            enable_timer_int();
         } else if (sync_state == SECOND_RESET_WARNING) {
             // on falling edge of the second reset warning acknowledgement
             disable_ack_detection_int();
             disable_timer_int();
             state = wait_for_hard_reset;
-            bit_counter = 0;
+            counter = 0;
             setup_timer_for_hard_reset();
             enable_timer_int();
             enable_ack_detection_int();
@@ -278,10 +266,9 @@ namespace amiga {
     void begin() {
         setup_ack_detection();
         setup_timer();
+        setup_reset_pin();
         setup_timer_for_resync();
         set_pins_as_pull_up();
-        DDRB &= ~pins::amiga::RST;
-        PORTB &= ~pins::amiga::RST;
         sync_state = UNSYNCED;
         user_ready_hard_reset = 0;
         send_one_bit();
@@ -290,13 +277,10 @@ namespace amiga {
     bool is_ready() { return sync_state == SYNCED; }
 
     bool send(uint8_t keycode) {
-        keycode = roll_and_inverse_data(keycode);
-        if (scancodes.write(&keycode)) {
+        if (scancodes.write(keycode)) {
             if (state == idle) {
-                scancodes.read(&data);
-                state = begin_transfer;
-                setup_timer_for_frame();
-                enable_timer_int();
+                scancodes.read(keycode);
+                send_scancode(keycode);
             }
             return true;
         } else {
@@ -304,20 +288,19 @@ namespace amiga {
         }
     }
 
+    void drain() {
+        while (is_ready() && state != idle) {}
+    }
+
     void hold_reset() {
-        const uint8_t reset_warning = 0x78;
-        // drain the output
-        while (state != idle && is_ready()) {
-        }
-        if (!is_ready()) {
-            hard_reset();
-            return;
-        }
-        data = roll_and_inverse_data(reset_warning);
+        drain();
         sync_state = FIRST_RESET_WARNING;
-        state = begin_transfer;
-        setup_timer_for_frame();
-        enable_timer_int();
+        send_scancode(reset_warning);
+    }
+
+    void release_reset() {
+        user_ready_hard_reset = 1;
+        try_hard_reset();
     }
 
 } // namespace amiga
