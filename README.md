@@ -38,7 +38,8 @@ The project uses C++ mainly to benefit from namespaces.
 
 ## Build and deploy
 
-> **Warning:** The build system is only available on Linux.
+> [!WARNING]
+> The build system is only available on Linux.
 
 > **Required:** `avr-gcc` and `avrdude`, respectively 5.4.0 and 6.3-20171130 on my setup.
 
