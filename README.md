@@ -7,12 +7,14 @@ Even though it uses the same 5-pin DIN 41524 connector as IBM AT keyboards, the 
 
 PAKIA is yet another adapter circuit, taking a PS/2 keyboard interface in input, and translating it into the Amiga keyboard interface in output.
 
+![Final results](resources/final_result.png)
+
 ## Features
 
 - Convert PS/2 scancode to Amiga scancode,
 - Handle lost synchronization and corresponding recovery,
 - Handle the reset combo (Ctrl + Left Amiga + Right Amiga) with the two reset warnings,
-- Use the [Menu](https://en.wikipedia.org/wiki/Menu_key) modifier key to type a key that has been absorbed by a larger key on the PS/2 keyboard but is present on an Amiga keyboard.
+- Use the [Menu](https://en.wikipedia.org/wiki/Menu_key) modifier key to type a key that has been absorbed by a larger key on the PS/2 keyboard but is present on an Amiga keyboard,
 - PCB with: 
     - on-board DIN socket for AT and PS/2 keyboards connection, with the later usable with a mini-DIN to DIN adapter cable,
     - strain relief for wire coming from the Amiga. 
