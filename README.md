@@ -11,7 +11,11 @@ PAKIA is yet another adapter circuit, taking a PS/2 keyboard interface in input,
 
 - Convert PS/2 scancode to Amiga scancode,
 - Handle lost synchronization and corresponding recovery,
+- Handle the reset combo (Ctrl + Left Amiga + Right Amiga) with the two reset warnings,
 - Use the [Menu](https://en.wikipedia.org/wiki/Menu_key) modifier key to type a key that has been absorbed by a larger key on the PS/2 keyboard but is present on an Amiga keyboard.
+- PCB with: 
+    - on-board DIN socket for AT and PS/2 keyboards connection, with the later usable with a mini-DIN to DIN adapter cable,
+    - strain relief for wire coming from the Amiga. 
 
 ## Under the hood
 
@@ -30,17 +34,19 @@ The solution I have implemented was way more stimulating for me to develop, so h
 
 The binary currently weighs 2KB, in that regard, one could choose to use an ATtiny45 instead of an ATtiny85, it might be enough even in case of additional features coming in future updates.
 
+The project uses C++ mainly to benefit from namespaces.
+
 ## Build and deploy
 
 > **Warning:** The build system is only available on Linux.
 
 > **Required:** `avr-gcc` and `avrdude`, respectively 5.4.0 and 6.3-20171130 on my setup.
 
-The project uses C++ mainly to benefit from namespaces.
-
 1. Specify the programmer to use with `avrdude` in the Makefile, with the variable `PROGRAMMER`.
 2. Build with `make`.
 3. Deploy with `make flash` while your programmer is wired to the ISP connector on the PCB.
+
+## Edit the translation map
 
 The lookup table to convert PS/2 scancode to Amiga ones is hard-coded in `src/translation_map.hh`.
 A tool called `translation-map-generator` can be built from the `tools` directory.
@@ -72,7 +78,7 @@ Here is a list of related open-source projects and their respective solutions:
     - uses an ATmega328p as a microcontroller (32KB Flash, 2KB SRAM),
     - leverages a pure AVR development environment,
     - provides a KiCAD project with schematic and PCB design,
-    - PCB based on both through-hole DIP-28 ATmega328p and DIN socket,
+    - PCB based on both through-hole DIP-28 ATmega328p and mini-DIN socket,
     - see a photo of the adapter board in [the dedicated blog article](http://mercatopo-en.blogspot.com/2013/11/first-prototype-of-akab-amiga-keyboard.html),
     - implements Amiga Ctrl-Amiga-Amiga reset combo keys, 
 - [PS2toAmiga](https://github.com/Jartza/PS2toAmiga) by [Jartza](https://github.com/Jartza)
