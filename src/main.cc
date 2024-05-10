@@ -38,7 +38,7 @@ int main() {
 
                 // detect reset combo (Ctrl + Left Amiga + Right Amiga)
                 if (reset_key && !(reset_combo & 0b10000)) {
-                    if (event.event_kind == ps2::event_kind::PRESSED) {
+                    if (event.event_kind == ps2::event_kind::PRESSED && !(reset_combo & 0b01000)) {
                         reset_combo |= reset_key;
                         if ((reset_combo & 0b111) == 0b111) {
                             amiga::hold_reset();
