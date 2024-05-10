@@ -70,7 +70,7 @@ namespace ps2 {
     }
 
     static void process_parity_bit() {
-        uint8_t read_parity = (PINB & pins::ps2::DAT) >> pins::ps2::DAT_PIN;
+        uint8_t read_parity = (PINB & pins::ps2::DAT) >> pins::ps2::DAT_POS;
         uint8_t computed_parity = data;
         computed_parity ^= computed_parity >> 4;
         computed_parity ^= computed_parity >> 2;
@@ -85,7 +85,7 @@ namespace ps2 {
     }
 
     static void process_data_bits() {
-        data |= ((PINB & pins::ps2::DAT) >> pins::ps2::DAT_PIN) << counter++;
+        data |= ((PINB & pins::ps2::DAT) >> pins::ps2::DAT_POS) << counter++;
         state = (counter < 8) ? process_data_bits : process_parity_bit;
     }
 
