@@ -32,6 +32,12 @@ namespace ps2 {
         SET_RESET_LEDS = 0xED
     };
 
+    enum leds {
+        SCROLL_LOCK = 1 << 0,
+        NUM_LOCK = 1 << 1,
+        CAPS_LOCK = 1 << 2
+    };
+
     void send(command command, uint8_t args = 0);
 
 } // namespace ps2

@@ -9,14 +9,17 @@
 
 void setup() {
     MCUCR &= ~(1 << PUD);  // Enable pull-up resistors.
-    MCUSR &= ~(1 << WDRF); // reset Watchdog reset flag
+    MCUSR &= ~(1 << WDRF); // Reset Watchdog reset flag.
     wdt_disable();
     sei();
     ps2::begin();
     amiga::begin();
+    ps2::send(ps2::command::RESET);
 }
 
 int main() {
+    namespace scps2 = scancodes::ps2;
+    namespace scami = scancodes::amiga;
     ps2::receiver receiver;
     ps2::event event;
     uint8_t last_scancode = 0;
@@ -27,79 +30,79 @@ int main() {
     setup();
     while (1) {
         if (receiver.consume(event)) {
-            { // Reset detection
-                namespace scps2 = scancodes::ps2;
-                enum {
-                    COMBO_PRESSED = 7,
-                    RESET_REQUEST_SENT = 1 << 3,
-                    COMBO_RELEASED = 1 << 4
-                };
-                uint8_t reset_key =
-                    (event.scancode == scps2::LEFT_CTRL ? 1 : 0) |
-                    (event.scancode == scps2::extended::LEFT_OS ? 2 : 0) |
-                    (event.scancode == scps2::extended::RIGHT_OS ? 4 : 0);
+            enum {
+                COMBO_PRESSED = 7,
+                RESET_REQUEST_SENT = 1 << 3,
+                COMBO_RELEASED = 1 << 4
+            };
+            uint8_t reset_key =
+                (event.scancode == scps2::LEFT_CTRL ? 1 : 0) |
+                (event.scancode == scps2::extended::LEFT_OS ? 2 : 0) |
+                (event.scancode == scps2::extended::RIGHT_OS ? 4 : 0);
 
-                // Detect reset combo (Ctrl + Left Amiga + Right Amiga).
-                if (reset_key && !(reset_combo & COMBO_RELEASED)) {
-                    if (event.kind == ps2::event::PRESSED &&
-                        !(reset_combo & RESET_REQUEST_SENT)) {
-                        reset_combo |= reset_key;
-                        if ((reset_combo & COMBO_PRESSED) == COMBO_PRESSED) {
-                            amiga::hold_reset();
-                            reset_combo |= RESET_REQUEST_SENT;
-                        }
-                    } else if (event.kind == ps2::event::RELEASED) {
-                        reset_combo &= ~reset_key;
-                        if (reset_combo & RESET_REQUEST_SENT) {
-                            amiga::release_reset();
-                            reset_combo |= COMBO_RELEASED;
-                        }
+            // Detect reset combo (Ctrl + Left Amiga + Right Amiga).
+            if (reset_key && !(reset_combo & COMBO_RELEASED)) {
+                if (event.kind == ps2::event::PRESSED &&
+                    !(reset_combo & RESET_REQUEST_SENT)) {
+                    reset_combo |= reset_key;
+                    if ((reset_combo & COMBO_PRESSED) == COMBO_PRESSED) {
+                        amiga::hold_reset();
+                        reset_combo |= RESET_REQUEST_SENT;
+                    }
+                } else if (event.kind == ps2::event::RELEASED) {
+                    reset_combo &= ~reset_key;
+                    if (reset_combo & RESET_REQUEST_SENT) {
+                        amiga::release_reset();
+                        reset_combo |= COMBO_RELEASED;
                     }
                 }
             }
+
             if (amiga::is_ready()) {
-                // Translate PS/2 to Amiga scancode.
                 uint8_t amiga_scancode =
                     pgm_read_byte_near(ps2_to_amiga_scancode + event.scancode);
 
-                // Detect alternative key (Menu).
-                if (event.scancode == scancodes::ps2::extended::MENU) {
-                    alt_num_pad = event.kind == ps2::event::PRESSED;
-                }
-
-                // Drop any unknown key.
-                // Backquote correspondance in Amiga scancode is 0x00, we need
-                // to ensure that backquote can be pressed and not misread for
-                // an unknown key.
-                if ((event.scancode != scancodes::ps2::BACKQUOTE) &&
-                    (amiga_scancode == 0)) {
+                if ((event.kind == ps2::event::PRESSED) &&
+                    (event.scancode == last_scancode)) {
                     continue;
                 }
 
-                // If + key is actually a - due to the alternative keypad
-                // function.
-                if ((amiga_scancode == scancodes::amiga::NUM_PLUS) &&
-                    alt_num_pad) {
-                    amiga_scancode = scancodes::amiga::NUM_MINUS;
+                // Detect alternative key (Menu).
+                alt_num_pad = event.scancode == scps2::extended::MENU
+                                  ? event.kind == ps2::event::PRESSED
+                                  : alt_num_pad;
+
+                // Drop any unknown key.
+                // Past this point, any unknown scancode on amiga side cannot be
+                // used.
+                if (event.scancode == 0xFF) {
+                    continue;
                 }
 
-                if ((event.kind == ps2::event::PRESSED) &&
-                    (event.scancode != last_scancode)) {
+                // If + key is actually a - due to the alternative
+                // keypad function.
+                amiga_scancode =
+                    alt_num_pad && (amiga_scancode == scami::NUM_PLUS)
+                        ? scami::NUM_MINUS
+                        : amiga_scancode;
+
+                // Send key with its type (key up or key down).
+                if (event.kind == ps2::event::PRESSED) {
                     last_scancode = event.scancode;
-                    if (event.scancode == scancodes::ps2::CAPS_LOCK) {
+                    if (event.scancode != scps2::CAPS_LOCK) {
+                        amiga::send(amiga_scancode);
+                    } else {
                         caps_lock = !caps_lock;
                         amiga::send(
                             amiga_scancode |
                             (caps_lock ? amiga::KEY_DOWN : amiga::KEY_UP));
-                        ps2::send(ps2::SET_RESET_LEDS, caps_lock << 2);
-                    } else {
-                        amiga::send(amiga_scancode);
+                        ps2::send(ps2::command::SET_RESET_LEDS,
+                                  caps_lock ? ps2::leds::CAPS_LOCK : 0);
                     }
                 } else if (event.kind == ps2::event::RELEASED) {
-                    if (event.scancode == last_scancode) {
-                        last_scancode = 0;
-                    }
-                    if (event.scancode != scancodes::ps2::CAPS_LOCK) {
+                    last_scancode =
+                        event.scancode == last_scancode ? 0 : last_scancode;
+                    if (event.scancode != scps2::CAPS_LOCK) {
                         amiga::send(amiga_scancode | amiga::KEY_UP);
                     }
                 }

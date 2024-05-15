@@ -221,14 +221,7 @@ namespace ps2 {
     }
 
     void send(command command, uint8_t cmd_arg) {
-        // we need to perform a request-to-send, which implies:
-        // 1. inhibiting KCLK for a least 100us, i.e. 5*20ms
-        // 2. putting KDAT to low while raising KCLK
-        // 3. send the command bits on the falling edge with parity and stop bit
-        // 4. check that there is an ack bit
-        // 5. check for ack bytes
-        // if there is an args, send args, then check for ack bytes too
-        while (direction == SENDING) {
+        while ((direction == SENDING) || (state != receive_start_bit)) {
         }
         byte_counter = 0;
         cmd[0] = command;

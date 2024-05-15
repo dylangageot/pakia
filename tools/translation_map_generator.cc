@@ -1,9 +1,12 @@
+#include <array>
 #include <iomanip>
 #include <iostream>
 
 #include "src/scancodes.hh"
 
-auto init_translation_map(uint8_t translation_map[256]) -> void {
+auto init_translation_map(std::array<uint8_t, 256> &translation_map) -> void {
+    std::fill(translation_map.begin(), translation_map.end(), 0xFF);
+
     using namespace scancodes;
     translation_map[ps2::ESC] = amiga::ESC;
     translation_map[ps2::F1] = amiga::F1;
@@ -110,7 +113,7 @@ auto init_translation_map(uint8_t translation_map[256]) -> void {
 }
 
 int main() {
-    uint8_t translation_map[256] = {0};
+    std::array<uint8_t, 256> translation_map;
     init_translation_map(translation_map);
 
     std::cout << "#pragma once" << std::endl << std::endl;
@@ -121,7 +124,7 @@ int main() {
         std::cout << "    ";
         for (int j = 0; j < 8; ++j) {
             std::cout << "0x" << std::hex << std::setfill('0') << std::setw(2)
-                      << (int)translation_map[i + j] << ", ";
+                      << static_cast<int>(translation_map[i + j]) << ", ";
         }
         std::cout << std::endl;
     }
