@@ -5,10 +5,8 @@ namespace ps2 {
 
     void begin();
 
-    enum event_kind { PRESSED = 0, RELEASED = 1 };
-
     struct event {
-        event_kind event_kind;
+        enum kind { PRESSED = 0, RELEASED = 1 } kind;
         uint8_t scancode;
     };
 
