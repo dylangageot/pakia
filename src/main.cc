@@ -75,7 +75,7 @@ int main() {
                 // Drop any unknown key.
                 // Past this point, any unknown scancode on amiga side cannot be
                 // used.
-                if (event.scancode == 0xFF) {
+                if (amiga_scancode == 0xFF) {
                     continue;
                 }
 

@@ -104,8 +104,7 @@ namespace ps2 {
     static void receive_stop_bit() {
         const uint8_t ACK = 0xFA;
         if (!(PINB & pins::ps2::DAT)) {
-            inhibit();
-            return;
+            return inhibit();
         }
         if (direction == SENDING) {
             if (data == ACK) {
@@ -121,14 +120,14 @@ namespace ps2 {
                 setup_clk_dectection_int_as_rising();
                 state = wait_for_idle;
             } else {
-                inhibit();
+                return inhibit();
             }
         } else if (direction == RECEIVING) {
             if (scancodes.write(data)) {
                 state = receive_start_bit;
             } else {
                 // if circular data is full, inhibit keyboard scancode reception
-                inhibit();
+                return inhibit();
             }
         }
     }
@@ -141,8 +140,7 @@ namespace ps2 {
         computed_parity ^= computed_parity >> 1;
         computed_parity = (~computed_parity) & 1;
         if (read_parity != computed_parity) {
-            inhibit();
-            return;
+            return inhibit();
         }
         counter++;
         state = receive_stop_bit;
@@ -155,8 +153,7 @@ namespace ps2 {
 
     static void receive_start_bit() {
         if (PINB & pins::ps2::DAT) {
-            inhibit();
-            return;
+            return inhibit();
         }
         data = 0;
         counter = 0;
@@ -165,7 +162,7 @@ namespace ps2 {
 
     static void receive_ack_bit() {
         if (PINB & pins::ps2::DAT) {
-            inhibit();
+            return inhibit();
         } else {
             state = receive_start_bit;
         }
@@ -232,7 +229,7 @@ namespace ps2 {
         } else {
             has_arg = false;
         }
-        inhibit(SENDING);
+        return inhibit(SENDING);
     }
 
     receiver::receiver() { reset(); }
