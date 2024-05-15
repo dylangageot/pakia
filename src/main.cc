@@ -41,14 +41,14 @@ int main() {
 
                 // Detect reset combo (Ctrl + Left Amiga + Right Amiga).
                 if (reset_key && !(reset_combo & COMBO_RELEASED)) {
-                    if (event.event_kind == ps2::event_kind::PRESSED &&
+                    if (event.kind == ps2::event::PRESSED &&
                         !(reset_combo & RESET_REQUEST_SENT)) {
                         reset_combo |= reset_key;
                         if ((reset_combo & COMBO_PRESSED) == COMBO_PRESSED) {
                             amiga::hold_reset();
                             reset_combo |= RESET_REQUEST_SENT;
                         }
-                    } else if (event.event_kind == ps2::event_kind::RELEASED) {
+                    } else if (event.kind == ps2::event::RELEASED) {
                         reset_combo &= ~reset_key;
                         if (reset_combo & RESET_REQUEST_SENT) {
                             amiga::release_reset();
@@ -64,7 +64,7 @@ int main() {
 
                 // Detect alternative key (Menu).
                 if (event.scancode == scancodes::ps2::extended::MENU) {
-                    alt_num_pad = event.event_kind == ps2::event_kind::PRESSED;
+                    alt_num_pad = event.kind == ps2::event::PRESSED;
                 }
 
                 // Drop any unknown key.
@@ -83,18 +83,19 @@ int main() {
                     amiga_scancode = scancodes::amiga::NUM_MINUS;
                 }
 
-                if ((event.event_kind == ps2::event_kind::PRESSED) &&
+                if ((event.kind == ps2::event::PRESSED) &&
                     (event.scancode != last_scancode)) {
                     last_scancode = event.scancode;
                     if (event.scancode == scancodes::ps2::CAPS_LOCK) {
                         caps_lock = !caps_lock;
                         amiga::send(
                             amiga_scancode |
-                            (caps_lock ? amiga::KEY_UP : amiga::KEY_DOWN));
+                            (caps_lock ? amiga::KEY_DOWN : amiga::KEY_UP));
+                        ps2::send(ps2::SET_RESET_LEDS, caps_lock << 2);
                     } else {
                         amiga::send(amiga_scancode);
                     }
-                } else if (event.event_kind == ps2::event_kind::RELEASED) {
+                } else if (event.kind == ps2::event::RELEASED) {
                     if (event.scancode == last_scancode) {
                         last_scancode = 0;
                     }
