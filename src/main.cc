@@ -7,6 +7,12 @@
 #include "scancodes.hh"
 #include "translation_map.hh"
 
+enum {
+    COMBO_PRESSED = 7,
+    RESET_REQUEST_SENT = 1 << 3,
+    COMBO_RELEASED = 1 << 4
+};
+
 void setup() {
     MCUCR &= ~(1 << PUD);  // Enable pull-up resistors.
     MCUSR &= ~(1 << WDRF); // Reset Watchdog reset flag.
@@ -26,15 +32,9 @@ int main() {
     uint8_t reset_combo = 0;
     bool caps_lock = false;
     bool alt_num_pad = false;
-
     setup();
     while (1) {
         if (receiver.consume(event)) {
-            enum {
-                COMBO_PRESSED = 7,
-                RESET_REQUEST_SENT = 1 << 3,
-                COMBO_RELEASED = 1 << 4
-            };
             uint8_t reset_key =
                 (event.scancode == scps2::LEFT_CTRL ? 1 : 0) |
                 (event.scancode == scps2::extended::LEFT_OS ? 2 : 0) |
