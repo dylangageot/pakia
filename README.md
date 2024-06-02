@@ -17,6 +17,7 @@ PAKIA is yet another adapter circuit, taking a PS/2 keyboard interface in input,
 - Convert PS/2 scancode to Amiga scancode,
 - Handle lost synchronization and corresponding recovery,
 - Handle the reset combo (Ctrl + Left Amiga + Right Amiga) with the two reset warnings,
+- Interact with PS/2 keyboard to set Caps Lock LED,
 - Use the [Menu](https://en.wikipedia.org/wiki/Menu_key) modifier key to type a key that has been absorbed by a larger key on the PS/2 keyboard but is present on an Amiga keyboard,
 - PCB with: 
     - on-board DIN socket for AT and PS/2 keyboards connection, with the later usable with a mini-DIN to DIN adapter cable,
@@ -32,12 +33,12 @@ Leveraging multiple timers and interrupt service routines, an ATtiny85 captures 
 In contrast to other solutions, signal timings for the Amiga keyboard interface are driven by discrete time events instead of being driven by blocking delays.
 One hardware timer generates periodic interrupt requests that once the corresponding ISR runs, the signal is taught to evolve its state through a software-based finite state machine, hence changing pins levels for both KDAT and KCLK.
 
-This asynchronous philosophy makes it possible to incorporate this piece of software in a busier system, without introducing blocking delay when Amiga commands are being sent (minus interrupting service routines execution time of course).
+This asynchronous philosophy makes it possible to incorporate this piece of software in a busier system, without introducing blocking delay when Amiga commands are being sent, minus interrupt service routines execution time of course.
 
 You might think that this is overengineering and that other solutions got it right enough by using blocking delays to handle their signal timings, and you are probably right!
 The solution I have implemented was way more stimulating for me to develop, so here we are!
 
-The binary currently weighs 2KB, in that regard, one could choose to use an ATtiny45 instead of an ATtiny85, it might be enough even in case of additional features coming in future updates.
+The binary currently weighs 3.2KB, in that regard, one could choose to use an ATtiny45 instead of an ATtiny85, it might be enough even in case of additional features coming in future updates.
 
 The project uses C++ mainly to benefit from namespaces.
 
@@ -48,8 +49,8 @@ The project uses C++ mainly to benefit from namespaces.
 
 > **Required:** `avr-gcc` and `avrdude`, respectively 5.4.0 and 6.3-20171130 on my setup.
 
-1. Specify the programmer to use with `avrdude` in the Makefile, with the variable `PROGRAMMER`.
-2. Build with `make`.
+1. Specify the programmer to use with `avrdude` in the Makefile, with the variable `PROGRAMMER`,
+2. Build with `make`,
 3. Deploy with `make flash` while your programmer is wired to the ISP connector on the PCB.
 
 ## Edit the translation map
@@ -73,11 +74,11 @@ The schematic and PCB were drawn in KiCAD. The project is available in the `hard
 
 Yes, there are other adapter circuits! 
 
-I started this project blindly, without searching if anyone made one before.
-Frankly, it was appealing to my eye, so why not?
-I found documentation on both keyboard interfaces and started developing a proof of concept on an Arduino Uno board, based on an ATmega328p.
+I have started this project blindly, without searching if anyone made one before.
+Frankly, it was appealing to my eye, so why not!
+I have found documentation on both keyboard interfaces and started developing a proof of concept on an Arduino Uno board, based on an ATmega328p.
 
-I discovered many of them once I had finished the prototype for PAKIA and wanted to design a PCB for it, with eventually a lighter microcontroller than the ATmega328p.
+I have discovered many of them once I had finished the prototype for PAKIA and wanted to design a PCB for it, with eventually a lighter microcontroller than the ATmega328p.
 Here is a list of related open-source projects and their respective solutions:
 
 - [AKAB](https://gitlab.com/hkzlab-retrocomputing/AKAB_Reloaded) by [hkzlabnet](http://mercatopo-en.blogspot.com/)
@@ -99,4 +100,4 @@ Here is a list of related open-source projects and their respective solutions:
 
 
 There is also the [Lyra 3](http://wiki.icomp.de/wiki/Lyra_3) adapter sold by Individual Computers.
-This one is very complete feature-wise, but I did not want to buy one as I thought that it would spoil my pleasure of developing my own, I'm sure you get it (right?).
+This one is very complete feature-wise, but I did not want to buy one as I thought that it would spoil my pleasure of developing my own, I'm sure you get it, right?
